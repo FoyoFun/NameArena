@@ -1,0 +1,16 @@
+{
+  "name": "namearena",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:web": "pnpm -F web dev",
+    "dev:server": "pnpm -F server dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -F @namearena/core test",
+    "sim": "pnpm -F @namearena/scripts sim",
+    "seed": "pnpm -F server seed"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

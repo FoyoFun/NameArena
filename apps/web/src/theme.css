@@ -1,0 +1,705 @@
+/* ============================================================
+   名字大乱斗 · 主题层（DESIGN.md 决策 #20/#21）
+   换风格 = 重写本文件 + 少量组件内 scoped 样式，组件结构不动。
+   布局基准：手机竖屏优先；≥900px 增强为桌面布局。
+   ============================================================ */
+
+:root {
+  --bg: #0b0f19;
+  --bg-2: #0f1524;
+  --panel: #151e33;
+  --panel-2: #1c2742;
+  --border: #2a3854;
+  --text: #e6edf6;
+  --muted: #8fa0b8;
+  --accent: #fbbf24;
+  --accent-2: #f59e0b;
+  --side-a: #f87171;
+  --side-a-bg: rgba(248, 113, 113, 0.12);
+  --side-b: #60a5fa;
+  --side-b-bg: rgba(96, 165, 250, 0.12);
+  --hp-hi: #4ade80;
+  --hp-mid: #facc15;
+  --hp-lo: #f87171;
+  --mp: #60a5fa;
+  --buff: #4ade80;
+  --debuff: #f87171;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font-size: 14px;
+  --nav-h: 56px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, #1b2540 0%, var(--bg) 60%) fixed,
+    var(--bg);
+  color: var(--text);
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+  font-size: var(--font-size);
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3 {
+  margin: 0.2em 0;
+}
+
+a {
+  color: var(--side-b);
+  text-decoration: none;
+}
+
+/* ---------- 通用元件 ---------- */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 2px 0 10px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 9px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  min-height: 40px;
+  transition: filter 0.15s, transform 0.05s;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:hover {
+  filter: brightness(1.15);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #201500;
+  font-weight: 700;
+  border: none;
+}
+
+.btn.danger {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: var(--hp-lo);
+}
+
+.btn.small {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.input,
+select {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 15px;
+  min-height: 42px;
+}
+
+.input:focus {
+  outline: 2px solid rgba(251, 191, 36, 0.4);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.error-text {
+  color: var(--hp-lo);
+  font-size: 13px;
+}
+
+.tag {
+  display: inline-block;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.tag.gold {
+  color: var(--accent);
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 12px 12px calc(var(--nav-h) + 16px); /* 底部留出移动端导航 */
+}
+
+/* ---------- 顶栏 ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(15, 21, 36, 0.85);
+  backdrop-filter: blur(6px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.logo {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, var(--accent), #fff3c4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.topbar .me {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.topbar .me b {
+  color: var(--text);
+}
+
+/* ---------- 底部导航（移动端）/ 顶部导航（桌面） ---------- */
+
+.navbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-h);
+  display: flex;
+  background: rgba(15, 21, 36, 0.95);
+  border-top: 1px solid var(--border);
+  z-index: 20;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.navbar a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.navbar a .ico {
+  font-size: 19px;
+  line-height: 1.1;
+}
+
+.navbar a.router-link-active {
+  color: var(--accent);
+}
+
+@media (min-width: 900px) {
+  :root {
+    --font-size: 15px;
+    --nav-h: 0px;
+  }
+
+  .page {
+    padding-bottom: 40px;
+  }
+
+  .navbar {
+    position: static;
+    height: auto;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px;
+    border-top: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .navbar a {
+    flex: 0 0 auto;
+    flex-direction: row;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+  }
+
+  .navbar a.router-link-active {
+    background: var(--panel-2);
+  }
+}
+
+/* ---------- 战斗舞台（竖屏优先：敌上我下；桌面左右对峙） ---------- */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stage .side-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stage .vs-divider {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 2px 0;
+}
+
+@media (min-width: 900px) {
+  .stage {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .stage .side-block {
+    flex: 1;
+  }
+
+  .stage .vs-divider {
+    align-self: center;
+    writing-mode: vertical-lr;
+    letter-spacing: 4px;
+    padding: 0 4px;
+  }
+}
+
+/* ---------- 单位卡 ---------- */
+
+.unit-card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  overflow: hidden;
+}
+
+.unit-card.side-A {
+  border-left: 3px solid var(--side-a);
+}
+
+.unit-card.side-B {
+  border-left: 3px solid var(--side-b);
+}
+
+.unit-card.down {
+  filter: grayscale(1) brightness(0.55);
+}
+
+.unit-card .name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.unit-card .name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.unit-card .owner {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.unit-card .pfill {
+  font-size: 12px;
+}
+
+.bar {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 5px;
+  position: relative;
+}
+
+.bar .fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.35s ease;
+}
+
+.bar .bar-label {
+  position: absolute;
+  inset: 0;
+  font-size: 9px;
+  line-height: 10px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.pills {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.pill {
+  font-size: 11px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  color: var(--muted);
+}
+
+.pill b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.status-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 5px;
+  min-height: 18px;
+  flex-wrap: wrap;
+}
+
+.status-ico {
+  font-size: 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 5px;
+}
+
+.status-ico.buff {
+  border-color: rgba(74, 222, 128, 0.45);
+}
+
+.status-ico.debuff {
+  border-color: rgba(248, 113, 113, 0.45);
+}
+
+/* ---------- 飘字 ---------- */
+
+.float-num {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translateX(-50%);
+  font-weight: 800;
+  font-size: 20px;
+  pointer-events: none;
+  animation: floatUp 0.95s ease-out forwards;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.float-num.damage {
+  color: #ffb4b4;
+}
+
+.float-num.crit {
+  color: var(--accent);
+  font-size: 26px;
+}
+
+.float-num.heal {
+  color: var(--hp-hi);
+}
+
+.float-num.miss {
+  color: var(--muted);
+  font-size: 16px;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -34px) scale(1.15);
+  }
+}
+
+/* ---------- VFX（注册表对应的内置特效；拓展见 battle-stage/vfx.ts） ---------- */
+
+.vfx-hit {
+  animation: shake 0.35s ease;
+}
+
+.vfx-crit {
+  animation: shake 0.45s ease, flash 0.45s ease;
+}
+
+.vfx-heal {
+  animation: glowGreen 0.7s ease;
+}
+
+.vfx-buff {
+  animation: glowGold 0.7s ease;
+}
+
+.vfx-debuff {
+  animation: glowRed 0.7s ease;
+}
+
+.vfx-ko {
+  animation: flash 0.6s ease;
+}
+
+.vfx-revive {
+  animation: glowGold 1s ease;
+}
+
+.vfx-slash::after,
+.vfx-fire::after,
+.vfx-frost::after,
+.vfx-poison::after,
+.vfx-stun::after,
+.vfx-meteor::after {
+  content: attr(data-emoji);
+  position: absolute;
+  right: 10px;
+  top: 6px;
+  font-size: 22px;
+  animation: pop 0.7s ease forwards;
+  pointer-events: none;
+}
+
+.vfx-stage {
+  animation: flash 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-3px); }
+}
+
+@keyframes flash {
+  0% { background-color: rgba(255, 255, 255, 0.35); }
+  100% { background-color: transparent; }
+}
+
+@keyframes glowGreen {
+  0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+  100% { box-shadow: 0 0 24px 6px rgba(74, 222, 128, 0); }
+}
+
+@keyframes glowGold {
+  0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.8); }
+  100% { box-shadow: 0 0 28px 8px rgba(251, 191, 36, 0); }
+}
+
+@keyframes glowRed {
+  0% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.7); }
+  100% { box-shadow: 0 0 24px 6px rgba(248, 113, 113, 0); }
+}
+
+@keyframes pop {
+  0% { opacity: 0; transform: scale(0.4) rotate(-20deg); }
+  30% { opacity: 1; transform: scale(1.25) rotate(6deg); }
+  100% { opacity: 0; transform: scale(1) rotate(0); }
+}
+
+/* ---------- 战报 ---------- */
+
+.battle-log {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.battle-log .line {
+  color: var(--muted);
+}
+
+.battle-log .line.al {
+  text-align: left;
+}
+
+.battle-log .line.ar {
+  text-align: right;
+}
+
+.battle-log .line.dim {
+  opacity: 0.55;
+  text-align: center;
+}
+
+/* 名字徽章：A 方深底白粗，B 方浅底黑粗（主人配色规范） */
+.nm {
+  border-radius: 6px;
+  padding: 0 6px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.nm.nm-a {
+  background: #24314e;
+  color: #ffffff;
+}
+
+.nm.nm-b {
+  background: #d9e5ff;
+  color: #000000;
+}
+
+/* 增益绿 / 减益红 / 属性词黄 */
+.v-pos {
+  color: var(--hp-hi);
+  font-weight: 700;
+}
+
+.v-neg {
+  color: var(--hp-lo);
+  font-weight: 700;
+}
+
+.kw {
+  color: var(--accent);
+}
+
+/* ---------- 能力卡片 ---------- */
+
+.ability-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.ability-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.ability-card .head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  flex-wrap: wrap;
+}
+
+.ability-card .head b {
+  font-size: 13px;
+}
+
+.ability-card .desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.ability-card.mini {
+  padding: 5px 8px;
+}
+
+.ability-card.mini .desc {
+  font-size: 11px;
+}
+
+.tag.passive {
+  color: var(--side-b);
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+.tag.kinds {
+  min-width: 34px;
+  text-align: center;
+}
+
+/* ---------- 表格 ---------- */
+
+table.list {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.list th,
+table.list td {
+  padding: 7px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+table.list th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 12px;
+}
