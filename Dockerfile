@@ -8,6 +8,9 @@ FROM node:22-slim AS deps
 RUN corepack enable && npm config set registry https://registry.npmmirror.com
 # better-sqlite3 的预编译二进制走 npmmirror；拉不到时用工具链本地编译兜底
 ENV better_sqlite3_binary_host_mirror=https://registry.npmmirror.com/-/binary/better-sqlite3
+# 国内加速：apt 换清华源（境外环境可删除这两行）
+RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/debian.sources 2>/dev/null || \
+    sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list || true
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
