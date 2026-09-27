@@ -1,0 +1,20 @@
+# NameArena 部署编排
+# 用法：
+#   docker compose up -d --build     # 构建并启动
+#   docker compose logs -f           # 看日志
+#   备份：数据在卷 namearena-data 中（SQLite 单文件）
+#   换机/重装：clone 本仓库 → docker compose up -d --build → 把备份的 data 目录
+#   拷回卷内（docker cp ./data/. namearena:/app/apps/server/data/）即可保留战绩
+services:
+  namearena:
+    build: .
+    image: namearena:latest
+    container_name: namearena
+    restart: unless-stopped
+    ports:
+      - "8787:8787" # frpc 转发这个端口即可（local_port = 8787）
+    volumes:
+      - namearena-data:/app/apps/server/data
+
+volumes:
+  namearena-data:

@@ -28,7 +28,7 @@
 
 ## 快速开始
 
-要求：Node.js ≥ 20、pnpm ≥ 9（`npm i -g pnpm` 或 corepack enable）。
+要求：Node.js ≥ 20、pnpm ≥ 9（`npm i -g pnpm` 或 corepack enable）。**Docker 部署则无需本机 Node 环境，见下方「部署」节。**
 
 ```bash
 pnpm install
@@ -41,7 +41,29 @@ pnpm dev:web     # 前端页面 → http://localhost:5173
 
 ## 部署
 
-单进程部署：构建一次，一个 Node 进程同时提供页面、REST API 和 WebSocket。
+### Docker（推荐）
+
+```bash
+git clone https://github.com/FoyoFun/NameArena.git
+cd NameArena
+docker compose up -d --build
+```
+
+单容器单端口：页面 + API 全在 `8787`，数据存于命名卷 `namearena-data`（SQLite 单文件）。`restart: unless-stopped` 保证随宿主机自启。容器启动时自动执行幂等的 seed（已有数据则跳过）。
+
+常用操作：
+
+```bash
+docker compose logs -f                          # 看日志
+docker compose down                             # 停止（数据保留在卷中）
+docker compose up -d --build                    # 更新代码后重建
+docker cp ./data-backup/. namearena:/app/apps/server/data/   # 恢复备份的数据
+docker cp namearena:/app/apps/server/data ./data-backup      # 备份数据
+```
+
+> 国内拉取 `node:22-slim` 超时时：`docker pull docker.m.daocloud.io/library/node:22-slim && docker tag docker.m.daocloud.io/library/node:22-slim node:22-slim`，Dockerfile 里的 `FROM node:22-slim` 会直接使用本地镜像。依赖安装阶段已配置 npmmirror 源与原生编译兜底。
+
+### 裸机部署
 
 ```bash
 pnpm install
@@ -50,9 +72,22 @@ pnpm seed        # 可选：写入示例队伍
 pnpm start       # 生产模式，监听 0.0.0.0:8787
 ```
 
-把 `http://你的服务器IP:8787` 发到群里即可开玩。需要 HTTPS/域名时，用 Caddy/Nginx 反代 8787 端口即可（前端使用 hash 路由，无需额外配置）。
-
 数据全部存放在 `apps/server/data/namearena.db`（SQLite 单文件），备份这个文件就是备份全部状态；删掉它再执行 `pnpm seed` 即可重置世界。
+
+### 配合 frp 内网穿透（手机流量访问）
+
+服务只监听 8787 一个端口。在**部署机**的 frpc 配置中加一段：
+
+```ini
+[[proxies]]
+name = "namearena"
+type = "tcp"
+localIP = "127.0.0.1"   # frpc 与服务同机时；若 frpc 是容器且与 namearena 同一 docker 网络，填容器名 "namearena"
+localPort = 8787
+remotePort = 8878       # frp 服务器上对外暴露的端口
+```
+
+重载 frpc 后，手机流量访问 `http://frp服务器地址:8878` 即可。需要 HTTPS/域名时在 frp 服务器侧配置，或用 Caddy/Nginx 反代 8787（前端为 hash 路由，无需额外配置）。
 
 ## 定制指南
 
