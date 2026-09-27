@@ -84,10 +84,10 @@ name = "namearena"
 type = "tcp"
 localIP = "127.0.0.1"   # frpc 与服务同机时；若 frpc 是容器且与 namearena 同一 docker 网络，填容器名 "namearena"
 localPort = 8787
-remotePort = 8878       # frp 服务器上对外暴露的端口
+remotePort = 8787       # frp 服务器上对外暴露的端口
 ```
 
-重载 frpc 后，手机流量访问 `http://frp服务器地址:8878` 即可。需要 HTTPS/域名时在 frp 服务器侧配置，或用 Caddy/Nginx 反代 8787（前端为 hash 路由，无需额外配置）。
+重载 frpc 后，手机流量访问 `http://frp服务器地址:8787` 即可。需要 HTTPS/域名时在 frp 服务器侧配置，或用 Caddy/Nginx 反代 8787（前端为 hash 路由，无需额外配置）。
 
 ## 定制指南
 
