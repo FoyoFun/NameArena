@@ -153,7 +153,7 @@ function winrate(t: TeamInfo): string {
     <div class="panel">
       <div class="panel-title">📚 数据池（{{ pool.length }} 支离线队伍）</div>
       <div class="muted" style="margin-bottom: 8px">挑战别人用过的队伍，对方不在线也能打。打完双方都记入战绩。</div>
-      <div v-for="t in pool" :key="t.id" class="row" style="justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border)">
+      <div v-for="t in pool" :key="t.id" class="list-row">
         <div>
           <b>{{ t.members.join(' · ') }}</b>
           <span class="muted" style="margin-left: 6px">{{ t.owner }}</span>
@@ -161,7 +161,7 @@ function winrate(t: TeamInfo): string {
         </div>
         <button class="btn small primary" :disabled="busy" @click="challenge(t.id)">挑战</button>
       </div>
-      <div v-if="pool.length === 0" class="muted" style="text-align: center; padding: 16px">
+      <div v-if="pool.length === 0" class="muted empty">
         池子还空着——先去打几场，或者等群友的队伍入池
       </div>
     </div>
@@ -170,7 +170,7 @@ function winrate(t: TeamInfo): string {
   <template v-else>
     <div class="panel">
       <div class="panel-title">👹 PVE 强敌</div>
-      <div v-for="b in mod?.bosses ?? []" :key="b.id" class="row" style="justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border)">
+      <div v-for="b in mod?.bosses ?? []" :key="b.id" class="list-row">
         <div>
           <b>{{ b.name }}</b>
           <span class="tag gold" style="margin-left: 6px">{{ b.title }}</span>

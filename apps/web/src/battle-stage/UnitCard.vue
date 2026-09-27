@@ -16,14 +16,7 @@ const SIX: Array<{ key: string; label: string }> = [
   { key: 'luk', label: '运' },
 ];
 
-const TIER_COLORS: Record<string, string> = {
-  mid: '#9ca3af',
-  low: '#60a5fa',
-  high: '#a78bfa',
-  super: '#fbbf24',
-  mythic: '#f87171',
-  godly: '#f0abfc',
-};
+/** 六维分档配色走 theme.css 的 .tier-* 全局类（换主题不动本组件） */
 
 const abilitiesOpen = ref(false);
 
@@ -53,15 +46,17 @@ const vfxCls = computed(() =>
     .filter(Boolean)
     .join(' '),
 );
-const vfxEmoji = computed(() => {
-  const v = myVfx.value[myVfx.value.length - 1];
-  if (!v) return '';
+/** 最近一条特效：emoji 弹出 span 以它的 id 作 key，连续特效每次都会重新弹出 */
+const lastVfx = computed(() => myVfx.value[myVfx.value.length - 1]);
+
+function vfxEmojiOf(v: { vfx: string; emoji: string }): string {
   return v.emoji || getVfx(v.vfx)?.emoji || '';
-});
+}
 </script>
 
 <template>
-  <div class="unit-card" :class="[`side-${unit.side}`, { down: unit.down }]" :data-emoji="vfxEmoji">
+  <div class="unit-card" :class="[`side-${unit.side}`, { down: unit.down }]">
+    <span v-if="lastVfx" :key="lastVfx.id" class="vfx-pop">{{ vfxEmojiOf(lastVfx) }}</span>
     <div :class="vfxCls" style="height: 100%">
       <div class="name-row">
         <span class="name">{{ unit.name }}</span>
@@ -74,7 +69,7 @@ const vfxEmoji = computed(() => {
       <div class="six-row">
         <span v-for="s in SIX" :key="s.key" class="six-item" :title="unit.base[s.key] !== undefined ? `${s.label} ${unit.base[s.key]}` : s.label">
           <i class="muted">{{ s.label }}</i>
-          <b :style="{ color: TIER_COLORS[unit.tiers[s.key]] ?? 'var(--text)' }">{{ unit.base[s.key] ?? '·' }}</b>
+          <b :class="`tier-${unit.tiers[s.key] ?? 'mid'}`">{{ unit.base[s.key] ?? '·' }}</b>
         </span>
       </div>
 
@@ -84,7 +79,7 @@ const vfxEmoji = computed(() => {
             class="fill"
             :style="{
               width: `${Math.max(0, Math.min(100, ((unit.stats[meta.id] ?? 0) / (unit.stats[meta.barMaxStat ?? 'maxHp'] ?? 1)) * 100))}%`,
-              background: meta.id === 'hp' ? hpColor(unit) : 'var(--mp)',
+              backgroundColor: meta.id === 'hp' ? hpColor(unit) : 'var(--mp)',
             }"
           />
           <span class="bar-label">{{ meta.label }} {{ unit.stats[meta.id] ?? 0 }}/{{ unit.stats[meta.barMaxStat ?? 'maxHp'] ?? 0 }}</span>

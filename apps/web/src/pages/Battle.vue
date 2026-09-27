@@ -153,7 +153,7 @@ const resultText = computed(() => {
 
 <template>
   <div v-if="error" class="panel error-text">{{ error }}</div>
-  <div v-else-if="loading" class="muted" style="text-align: center; padding: 30px">加载战报…</div>
+  <div v-else-if="loading" class="muted empty">加载战报…</div>
   <template v-else-if="mod">
     <div class="panel" style="display: flex; gap: 8px; align-items: center; justify-content: space-between">
       <div class="row">
@@ -164,7 +164,7 @@ const resultText = computed(() => {
       <button class="btn small primary" @click="copyReport">{{ copied ? '✓ 已复制' : '📋 复制战报' }}</button>
     </div>
 
-    <div v-if="sequencer.state.finished && sequencer.state.result" class="panel" style="text-align: center; font-size: 16px; font-weight: 700; border-color: rgba(251, 191, 36, 0.5)">
+    <div v-if="sequencer.state.finished && sequencer.state.result" class="panel result-banner">
       {{ resultText }}
     </div>
 

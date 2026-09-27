@@ -10,18 +10,21 @@ const sideA = computed(() => sequencer.state.units.filter((u) => u.side === 'A')
 const sideB = computed(() => sequencer.state.units.filter((u) => u.side === 'B'));
 
 const stageVfx = computed(() => sequencer.state.vfxes.filter((v) => v.target === 'stage').length > 0);
+
+/** 播放代次：key 掺入它，重播同一场时单位卡也会重建 → 开场入场动画每次都触发 */
+const gen = computed(() => sequencer.state.gen);
 </script>
 
 <template>
   <div class="stage" :class="{ 'vfx-stage': stageVfx }">
     <div class="side-block side-A">
-      <div class="muted" style="text-align: center">🔴 A 方</div>
-      <UnitCard v-for="(u, i) in sideA" :key="u.uid" :unit="u" :stats-meta="props.statsMeta" :index="i" />
+      <div class="side-label">🔴 A 方</div>
+      <UnitCard v-for="(u, i) in sideA" :key="`${u.uid}-${gen}`" :unit="u" :stats-meta="props.statsMeta" :index="i" />
     </div>
     <div class="vs-divider">VS</div>
     <div class="side-block side-B">
-      <div class="muted" style="text-align: center">🔵 B 方</div>
-      <UnitCard v-for="(u, i) in sideB" :key="u.uid" :unit="u" :stats-meta="props.statsMeta" :index="i" />
+      <div class="side-label">🔵 B 方</div>
+      <UnitCard v-for="(u, i) in sideB" :key="`${u.uid}-${gen}`" :unit="u" :stats-meta="props.statsMeta" :index="i" />
     </div>
   </div>
 </template>

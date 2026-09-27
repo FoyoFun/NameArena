@@ -141,7 +141,7 @@ const myModTeams = computed(() => teams.value.filter((x) => x.modId === activeMo
       </div>
     </div>
   </div>
-  <div v-if="myModTeams.length === 0" class="muted" style="text-align: center; padding: 20px">
+  <div v-if="myModTeams.length === 0" class="muted empty">
     这个模组下还没有队伍，先建一支吧
   </div>
 </template>

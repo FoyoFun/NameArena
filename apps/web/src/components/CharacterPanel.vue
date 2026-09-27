@@ -22,9 +22,9 @@ const STAT_LABELS: Record<StatId, string> = {
   luk: '幸运',
 };
 
-function tierColor(id: string): { color: string; label: string } {
-  const t = STAT_TIERS.find((x) => x.id === id);
-  return { color: t?.color ?? '#9ca3af', label: t?.label ?? '' };
+/** 分档标签（悬停提示用）；配色走 theme.css 的 .tier-* 全局类（换主题不动本组件） */
+function tierLabel(id: string): string {
+  return STAT_TIERS.find((x) => x.id === id)?.label ?? '';
 }
 
 const personality = computed(() => {
@@ -84,10 +84,10 @@ const abilityRows = computed(() =>
         v-for="(label, key) in STAT_LABELS"
         :key="key"
         style="text-align: center; flex: 1; min-width: 44px"
-        :title="tierColor(char.tiers[key as StatId]).label"
+        :title="tierLabel(char.tiers[key as StatId])"
       >
         <div class="muted" style="font-size: 11px">{{ label }}</div>
-        <div style="font-weight: 800; font-size: 18px" :style="{ color: tierColor(char.tiers[key as StatId]).color }">
+        <div class="tier-num" :class="`tier-${char.tiers[key as StatId] ?? 'mid'}`">
           {{ char.base[key as StatId] }}
         </div>
       </div>

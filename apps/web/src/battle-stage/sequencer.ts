@@ -64,6 +64,8 @@ export class Sequencer {
     finished: false,
     round: 0,
     speed: 1,
+    /** 播放代次：每场 play 递增。BattleStage 用它掺进单位卡 key，重播时重建卡片重放入场动画 */
+    gen: 0,
     result: null as null | { winner: string | null; rounds: number; reason: string },
   });
 
@@ -106,6 +108,7 @@ export class Sequencer {
     const myRun = ++this.runId; // 使任何尚在运行的旧播放循环失效
     this.reset();
     if (this.runId !== myRun) return; // 极端竞态下直接让位
+    this.state.gen++;
     this.state.playing = true;
     for (const ev of events) {
       if (myRun !== this.runId) return; // 已被新一场战斗取代，旧事件流作废
@@ -134,8 +137,9 @@ export class Sequencer {
   private prune(): void {
     const now = Date.now();
     if (!this.skipFlag) {
-      this.state.floats = this.state.floats.filter((f) => now - f.born < 1000);
-      this.state.vfxes = this.state.vfxes.filter((v) => now - v.born < 900);
+      // 窗口须 ≥ theme.css 里对应动画的总时长（飘字 1.05s/暴击 1.15s、特效弹出 0.8s/复活 1s）
+      this.state.floats = this.state.floats.filter((f) => now - f.born < 1250);
+      this.state.vfxes = this.state.vfxes.filter((v) => now - v.born < 1050);
     } else {
       this.state.floats = [];
       this.state.vfxes = [];
@@ -245,8 +249,12 @@ export class Sequencer {
         break;
       }
       case 'unitDown': {
-        const u = this.unit(ev.payload['uid'] as string);
+        const uid = ev.payload['uid'] as string;
+        const u = this.unit(uid);
         if (u) u.down = true;
+        // KO 终结演出：卡上放大闪灭 + ☠️，并把节拍拉长半拍再继续
+        this.addVfx('ko', `unit:${uid}`);
+        duration = Math.max(duration, 850);
         break;
       }
       case 'battleEnd': {

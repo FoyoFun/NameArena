@@ -72,7 +72,7 @@ function askRename() {
         <component :is="Component" />
       </keep-alive>
     </router-view>
-    <div v-if="!ready" class="muted" style="text-align: center; padding: 40px 0">正在进入竞技场…</div>
+    <div v-if="!ready" class="muted empty" style="padding: 40px 0">正在进入竞技场…</div>
   </main>
 
   <nav class="navbar">

@@ -51,6 +51,6 @@ function medal(i: number): string {
         </tr>
       </tbody>
     </table>
-    <div v-else class="muted" style="text-align: center; padding: 20px">还没有数据，打几场就有了</div>
+    <div v-else class="muted empty">还没有数据，打几场就有了</div>
   </div>
 </template>

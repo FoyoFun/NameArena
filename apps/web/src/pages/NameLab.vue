@@ -113,7 +113,7 @@ function quickBattle(): void {
   <div class="lab-grid">
     <div v-for="(c, idx) in [charA, charB]" :key="idx" class="panel">
       <CharacterPanel v-if="c" :char="c" />
-      <div v-else class="muted" style="text-align: center; padding: 50px 0">
+      <div v-else class="muted empty" style="padding: 50px 0">
         {{ idx === 0 ? '输入名字，点击「✨ 生成角色」' : '右边也来一个' }}<br />
         <span style="font-size: 12px">说不定就出了个传奇</span>
       </div>

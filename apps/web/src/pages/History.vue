@@ -26,8 +26,8 @@ function time(t: string): string {
     <div class="panel-title">📜 历史战报</div>
     <div class="muted" style="margin-bottom: 8px">战报只存「配置 + 种子」，点开时本地重演——想看多久之前的都行。</div>
     <div v-if="error" class="error-text">{{ error }}</div>
-    <div v-for="b in list" :key="b.id" style="padding: 8px 0; border-bottom: 1px solid var(--border)">
-      <router-link :to="`/battle/${b.id}`" style="display: block">
+    <div v-for="b in list" :key="b.id" class="list-row">
+      <router-link :to="`/battle/${b.id}`" style="flex: 1">
         <div class="row" style="justify-content: space-between">
           <div>
             <b :style="{ color: 'var(--side-a)' }">{{ b.teams.find((t) => t.side === 'A')?.names.join('·') }}</b>
@@ -44,6 +44,6 @@ function time(t: string): string {
         </div>
       </router-link>
     </div>
-    <div v-if="!error && list.length === 0" class="muted" style="text-align: center; padding: 20px">还没有对局，去竞技场打一场吧</div>
+    <div v-if="!error && list.length === 0" class="muted empty">还没有对局，去竞技场打一场吧</div>
   </div>
 </template>
