@@ -10,13 +10,13 @@ import { players, teams } from './db/schema';
 
 const SYSTEM_TOKEN = 'system';
 
-const SAMPLE_TEAMS: Array<{ modId: string; members: string[] }> = [
-  { modId: 'normal-pvp', members: ['关羽', '张飞', '赵云'] },
-  { modId: 'normal-pvp', members: ['宋江', '武松', '林冲'] },
-  { modId: 'normal-pvp', members: ['孙悟空', '猪八戒', '沙僧'] },
-  { modId: 'normal-pvp', members: ['张伟', '王芳', '李娜'] },
-  { modId: 'normal-pvp', members: ['叶问'] },
-  { modId: 'normal-pvp', members: ['诸葛亮', '司马懿'] },
+const SAMPLE_TEAMS: Array<{ modId: string; members: Array<string | { name: string; opts?: Record<string, unknown> }> }> = [
+  // 幻想大乱斗示范队（F47：常规模式已退场；选择参与种子、无属性偏置）
+  { modId: 'fantasy-pvp', members: [{ name: '圣女贞德', opts: { gender: 'female', jobId: 'whitemage' } }, { name: '玛尔达', opts: { gender: 'female', jobId: 'knight' } }, { name: '埃克莱尔', opts: { jobId: 'apothecary' } }] },
+  { modId: 'fantasy-pvp', members: [{ name: '无名剑客', opts: { jobId: 'swordsman' } }, { name: '影蟒', opts: { gender: 'male', jobId: 'assassin' } }, { name: '轰天拳王', opts: { jobId: 'grappler' } }] },
+  { modId: 'fantasy-pvp', members: [{ name: '莉拉', opts: { gender: 'female', jobId: 'dancer' } }, { name: '缪斯', opts: { gender: 'female', jobId: 'bard' } }, { name: '贝希摩斯', opts: { jobId: 'hunter' } }] },
+  { modId: 'fantasy-pvp', members: [{ name: '虚空贤者', opts: { jobId: 'blackmage' } }] },
+  { modId: 'fantasy-pvp', members: [{ name: '铁壁骑士团', opts: { jobId: 'knight' } }, { name: '狂战之魂', opts: { jobId: 'warrior' } }] },
 ];
 
 function main() {
@@ -33,7 +33,9 @@ function main() {
         id: randomUUID(),
         ownerToken: SYSTEM_TOKEN,
         modId: t.modId,
-        membersJson: JSON.stringify(t.members.map((name) => ({ name }))),
+        membersJson: JSON.stringify(
+          t.members.map((m) => (typeof m === 'string' ? { name: m } : { name: m.name, opts: m.opts })),
+        ),
         createdAt: now,
         inPoolAt: now, // 种子队直接入池
         wins: 0,

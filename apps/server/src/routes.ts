@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { and, desc, eq, isNotNull, ne, sql } from 'drizzle-orm';
-import { createBattle, getMod, MODS, validateName, BOSS_MAP } from '@namearena/core';
+import { battleSeed, createBattle, getMod, MODS, simulate, validateName } from '@namearena/core';
 import type { BattleConfig } from '@namearena/core';
 import { db, sqlite } from './db/db';
-import { battles, ladder, players, teams } from './db/schema';
+import { battles, ladder, players, pveRecords, teams } from './db/schema';
 
 // ---------- 工具 ----------
 
@@ -31,12 +31,24 @@ function requirePlayer(req: FastifyRequest, reply: FastifyReply) {
   return player;
 }
 
+/** members_json 的存储结构：名字 + 可选生成选项（性别/职业等，模组自解释） */
+interface MemberJson {
+  name: string;
+  opts?: Record<string, unknown>;
+}
+
+function attackerMembers(row: typeof teams.$inferSelect): MemberJson[] {
+  return JSON.parse(row.membersJson) as MemberJson[];
+}
+
 function parseTeam(row: typeof teams.$inferSelect) {
   const owner = getPlayerByToken(row.ownerToken);
+  const members = JSON.parse(row.membersJson) as MemberJson[];
   return {
     id: row.id,
     modId: row.modId,
-    members: (JSON.parse(row.membersJson) as { name: string }[]).map((m) => m.name),
+    members: members.map((m) => m.name),
+    memberOpts: members.map((m) => m.opts ?? null),
     owner: owner ? displayName(owner) : '未知',
     mine: false,
     wins: row.wins,
@@ -173,10 +185,7 @@ export function registerRoutes(app: FastifyInstance): void {
       genVersion: m.genVersion,
       maxUnits: m.team.maxUnits,
       stats: m.stats,
-      bosses:
-        m.pveEnemies !== undefined
-          ? [...BOSS_MAP.values()].map((b) => ({ id: b.id, name: b.name, title: b.title, desc: b.desc }))
-          : undefined,
+      bosses: m.pveEnemies !== undefined ? (m.pveBosses?.() ?? []) : undefined,
     }));
   });
 
@@ -185,23 +194,28 @@ export function registerRoutes(app: FastifyInstance): void {
   app.post('/api/teams', async (req, reply) => {
     const player = requirePlayer(req, reply);
     if (!player) return;
-    const body = req.body as { modId?: string; members?: string[] };
+    // 成员可以是纯名字字符串，也可以是 { name, gender?, jobId? }（角色生成选项）
+    const body = req.body as { modId?: string; members?: Array<string | { name?: string; opts?: Record<string, unknown> }> };
     const mod = MODS.find((m) => m.id === body.modId);
     if (!mod) throw new Error('未知模组');
     const members = body.members ?? [];
-    const names: { name: string; side: string }[] = [];
+    const units: { name: string; side: string; opts?: Record<string, unknown> }[] = [];
     for (const raw of members) {
-      const r = validateName(raw ?? '');
+      const name = typeof raw === 'string' ? raw : (raw?.name ?? '');
+      const opts = typeof raw === 'string' ? undefined : raw?.opts;
+      const r = validateName(name ?? '');
       if (!r.ok) throw new Error(`队员名不合法：${r.reason}`);
-      names.push({ name: r.name, side: 'A' });
+      const optErr = mod.validateGenOpts?.(opts);
+      if (optErr) throw new Error(optErr);
+      units.push({ name: r.name, side: 'A', opts });
     }
-    const check = mod.team.validateTeam({ side: 'A', units: names });
+    const check = mod.team.validateTeam({ side: 'A', units });
     if (check) throw new Error(check);
     const row = {
       id: randomUUID(),
       ownerToken: player.token,
       modId: mod.id,
-      membersJson: JSON.stringify(names.map((n) => ({ name: n.name }))),
+      membersJson: JSON.stringify(units.map((u) => (u.opts ? { name: u.name, opts: u.opts } : { name: u.name }))),
       createdAt: now(),
       inPoolAt: null,
       wins: 0,
@@ -279,22 +293,22 @@ export function registerRoutes(app: FastifyInstance): void {
     let config: BattleConfig;
     if (kind === 'pve') {
       const bossId = body.bossId ?? '';
-      const bossDef = BOSS_MAP.get(bossId);
-      if (!bossDef) throw new Error('未知 Boss');
+      const brief = mod.pveBosses?.().find((b) => b.id === bossId);
+      if (!brief) throw new Error('未知 Boss');
       config = {
         modId: mod.id,
         kind: 'pve',
         teams: [
           {
             side: 'A',
-            units: (JSON.parse(attacker.membersJson) as { name: string }[]).map((m) => ({
+            units: attackerMembers(attacker).map((m) => ({
               name: m.name,
               side: 'A',
               owner: displayName(player),
+              opts: m.opts,
             })),
           },
-          // B 方只放名字占位供战报展示，真正数值由规则集按 bossId 重建（DESIGN.md 7.9）
-          { side: 'B', units: [{ name: bossDef.name, side: 'B', owner: '系统' }] },
+          { side: 'B', units: [{ name: brief.name, side: 'B', owner: '系统' }] },
         ],
         bossId,
       };
@@ -313,18 +327,20 @@ export function registerRoutes(app: FastifyInstance): void {
         teams: [
           {
             side: 'A',
-            units: (JSON.parse(attacker.membersJson) as { name: string }[]).map((m) => ({
+            units: attackerMembers(attacker).map((m) => ({
               name: m.name,
               side: 'A',
               owner: displayName(player),
+              opts: m.opts,
             })),
           },
           {
             side: 'B',
-            units: (JSON.parse(defender.membersJson) as { name: string }[]).map((m) => ({
+            units: attackerMembers(defender).map((m) => ({
               name: m.name,
               side: 'B',
               owner: defenderOwner ? displayName(defenderOwner) : '未知',
+              opts: m.opts,
             })),
           },
         ],
@@ -350,6 +366,26 @@ export function registerRoutes(app: FastifyInstance): void {
         createdAt: now(),
       })
       .run();
+
+    // PVE 讨伐记录（排行榜用，DESIGN-FANTASY.md §6.4）。需要 scores → 补一次本地模拟取状态
+    if (kind === 'pve') {
+      const { state } = simulate(mod, config, record.seed);
+      const scores = state.scratch['scores'] as Record<string, number> | undefined;
+      db.insert(pveRecords)
+        .values({
+          id: randomUUID(),
+          battleId: id,
+          modId: mod.id,
+          bossId: body.bossId ?? '',
+          teamNames: JSON.stringify(config.teams[0]!.units.map((u) => u.name)),
+          owner: displayName(player),
+          win: record.result.winner === 'A' ? 1 : 0,
+          actions: record.result.rounds,
+          score: Math.round(scores?.['A'] ?? 0),
+          createdAt: now(),
+        })
+        .run();
+    }
 
     const tx = sqlite.transaction(() => {
       recordBattleOutcome(mod.id, record.config, record.result.winner, attacker.id, body.defenderTeamId);
@@ -422,5 +458,36 @@ export function registerRoutes(app: FastifyInstance): void {
       }))
       .sort((a, b) => b.winrate - a.winrate || b.battles - a.battles)
       .slice(0, 100);
+  });
+
+  // ---- PVE 讨伐榜（DESIGN-FANTASY.md §6.4）----
+  // 排序：胜利 > 失败；胜利内行动数少者高 → 己方分数高者高；失败内行动数多者高（撑得久）→ 己方分数高者高（虽败犹荣）
+
+  app.get('/api/pve-ladder', async (req) => {
+    const q = req.query as { modId?: string; bossId?: string; limit?: string };
+    if (!q.modId) throw new Error('缺少 modId');
+    if (!q.bossId) throw new Error('缺少 bossId');
+    const limit = Math.min(100, Number(q.limit ?? 50));
+    const rows = db
+      .select()
+      .from(pveRecords)
+      .where(and(eq(pveRecords.modId, q.modId), eq(pveRecords.bossId, q.bossId)))
+      .all();
+    return rows
+      .map((r) => ({
+        battleId: r.battleId,
+        teamNames: JSON.parse(r.teamNames) as string[],
+        owner: r.owner,
+        win: r.win === 1,
+        actions: r.actions,
+        score: r.score,
+        createdAt: r.createdAt,
+      }))
+      .sort((a, b) => {
+        if (a.win !== b.win) return a.win ? -1 : 1;
+        if (a.actions !== b.actions) return a.win ? a.actions - b.actions : b.actions - a.actions;
+        return b.score - a.score;
+      })
+      .slice(0, limit);
   });
 }

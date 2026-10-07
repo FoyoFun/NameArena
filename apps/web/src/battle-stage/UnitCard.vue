@@ -1,22 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import type { StatMeta } from '@namearena/core';
+import type { ModDisplay, StatMeta } from '@namearena/core';
 import { getVfx } from './vfx';
 import { sequencer } from './sequencer';
 import type { UnitViewState } from './sequencer';
 
-const props = defineProps<{ unit: UnitViewState; statsMeta: StatMeta[]; index: number }>();
+const props = defineProps<{ unit: UnitViewState; statsMeta: StatMeta[]; display: ModDisplay; index: number }>();
 
-const SIX: Array<{ key: string; label: string }> = [
-  { key: 'str', label: '力' },
-  { key: 'wis', label: '智' },
-  { key: 'vit', label: '体' },
-  { key: 'spr', label: '神' },
-  { key: 'agi', label: '敏' },
-  { key: 'luk', label: '运' },
-];
-
-/** 六维分档配色走 theme.css 的 .tier-* 全局类（换主题不动本组件） */
+/** 六维行与分档配色：键/标签由模组 display 声明，配色走 theme.css 的 .tier-* 全局类 */
+const SIX = computed(() => props.display.sixStats);
 
 const abilitiesOpen = ref(false);
 
@@ -32,10 +24,14 @@ function hpColor(u: UnitViewState): string {
 
 function fmt(meta: StatMeta, u: UnitViewState): string {
   const v = u.stats[meta.id] ?? 0;
-  if (meta.desc === '百分比' || meta.id === 'dodge' || meta.id === 'crit') {
+  if (meta.format === 'pct') {
     return `${Math.round(v * 100)}%`;
   }
-  return String(Math.round(v * 10) / 10);
+  return String(Math.round(v)); // 属性不显示小数（主人裁定 F45）
+}
+
+function tierLabel(key: string): string {
+  return props.display.tierLabel(props.unit.tiers[key] ?? '');
 }
 
 const myFloats = computed(() => sequencer.state.floats.filter((f) => f.uid === props.unit.uid));
@@ -60,15 +56,14 @@ function vfxEmojiOf(v: { vfx: string; emoji: string }): string {
     <div :class="vfxCls" style="height: 100%">
       <div class="name-row">
         <span class="name">{{ unit.name }}</span>
-        <span class="pfill">{{ unit.personalityName }}</span>
+        <span v-for="t in unit.tags" :key="t" class="pfill">{{ t }}</span>
         <span class="owner" v-if="unit.owner">{{ unit.owner }}</span>
-        <span v-if="unit.totalCost > 0" class="tag" :title="'能力总 cost（伪预算）'">cost {{ unit.totalCost }}</span>
       </div>
 
-      <!-- 六维（分档配色，默认显示） -->
+      <!-- 六维（模组声明的键与短标签，分档配色，默认显示） -->
       <div class="six-row">
-        <span v-for="s in SIX" :key="s.key" class="six-item" :title="unit.base[s.key] !== undefined ? `${s.label} ${unit.base[s.key]}` : s.label">
-          <i class="muted">{{ s.label }}</i>
+        <span v-for="s in SIX" :key="s.key" class="six-item" :title="`${s.label} ${unit.base[s.key] ?? '·'} ${tierLabel(s.key)}`">
+          <i class="muted">{{ s.short }}</i>
           <b :class="`tier-${unit.tiers[s.key] ?? 'mid'}`">{{ unit.base[s.key] ?? '·' }}</b>
         </span>
       </div>
@@ -82,7 +77,7 @@ function vfxEmojiOf(v: { vfx: string; emoji: string }): string {
               backgroundColor: meta.id === 'hp' ? hpColor(unit) : 'var(--mp)',
             }"
           />
-          <span class="bar-label">{{ meta.label }} {{ unit.stats[meta.id] ?? 0 }}/{{ unit.stats[meta.barMaxStat ?? 'maxHp'] ?? 0 }}</span>
+          <span class="bar-label">{{ meta.label }} {{ Math.round(unit.stats[meta.id] ?? 0) }}/{{ Math.round(unit.stats[meta.barMaxStat ?? 'maxHp'] ?? 0) }}</span>
         </div>
       </div>
 
@@ -100,10 +95,10 @@ function vfxEmojiOf(v: { vfx: string; emoji: string }): string {
 
       <!-- 能力：默认折叠，点击展开（能力以卡片展示） -->
       <div class="ab-toggle" @click="abilitiesOpen = !abilitiesOpen">
-        {{ abilitiesOpen ? '▾' : '▸' }} 能力 {{ unit.abilities.length }}
+        {{ abilitiesOpen ? '▾' : '▸' }} 技能 {{ unit.skills.length }}
       </div>
       <div v-if="abilitiesOpen" class="ability-cards" style="grid-template-columns: 1fr">
-        <div v-for="a in unit.abilities" :key="a.id" class="ability-card mini" :title="a.desc">
+        <div v-for="a in unit.skills" :key="a.id" class="ability-card mini" :title="a.desc">
           <div class="head">
             <span class="tag kinds" :class="a.kind === 'active' ? 'gold' : 'passive'">{{ a.kind === 'active' ? '主动' : '被动' }}</span>
             <b>{{ a.name }}</b>

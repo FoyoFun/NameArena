@@ -1,7 +1,7 @@
-import { generateNormalCharacter, NORMAL_PVP, NORMAL_PVE, NORMAL_GEN_KEY, NORMAL_GEN_VERSION, BOSS_MAP } from '@namearena/core';
+import { BOSS_MAP, getMod } from '@namearena/core';
 import { simulate } from '@namearena/core';
-import type { BattleConfig } from '@namearena/core';
-import { hashString } from '@namearena/core';
+import type { BattleConfig, Mod } from '@namearena/core';
+import { hashString, makeRng } from '@namearena/core';
 
 /**
  * 批量模拟 CLI（DESIGN.md 7.10 数值调和工具链）。
@@ -9,6 +9,7 @@ import { hashString } from '@namearena/core';
  * 用法：
  *   pnpm sim -- 张三 李四 王五 --vs 赵六 钱七 孙八 [-n 500]
  *   pnpm sim -- 勇者 法师 --pve slime-king [-n 500]
+ *   pnpm sim -- 张三 --vs 李四 --mod fantasy-pvp [-n 500]   # 幻想大乱斗
  *
  * 每改一个数值旋钮（分布表/λ/cost表/公式系数），必须跑一遍看胜率分布。
  */
@@ -19,6 +20,7 @@ function parseArgs(argv: string[]) {
   let bossId: string | null = null;
   let n = 500;
   let mode: 'vs' | 'pve' = 'vs';
+  let modId = 'fantasy-pvp';
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (a === '--') continue; // pnpm 透传的分隔符
@@ -30,20 +32,22 @@ function parseArgs(argv: string[]) {
     } else if (a === '--pve') {
       mode = 'pve';
       bossId = argv[++i] ?? null;
+    } else if (a === '--mod') {
+      modId = argv[++i] ?? 'fantasy-pvp';
     } else if (a === '-n') {
       n = Number(argv[++i] ?? 500);
     } else {
       sideA.push(a);
     }
   }
-  return { sideA, sideB, bossId, n, mode };
+  return { sideA, sideB, bossId, n, mode, modId };
 }
 
 function main() {
   const argv = process.argv.slice(2);
-  const { sideA, sideB, bossId, n, mode } = parseArgs(argv);
+  const { sideA, sideB, bossId, n, mode, modId } = parseArgs(argv);
   if (sideA.length === 0) {
-    console.log('用法：pnpm sim -- 张三 李四 王五 --vs 赵六 钱七 孙八 [-n 500]');
+    console.log('用法：pnpm sim -- 张三 李四 王五 --vs 赵六 钱七 孙八 [-n 500] [--mod fantasy-pvp|fantasy-pve]');
     console.log('      pnpm sim -- 勇者 法师 --pve slime-king [-n 500]');
     process.exit(1);
   }
@@ -71,27 +75,33 @@ function main() {
       process.exit(1);
     }
     config = {
-      modId: 'normal-pvp',
+      modId,
       kind: 'async',
       teams: [
         { side: 'A', units: sideA.map((name) => ({ name, side: 'A' })) },
         { side: 'B', units: sideB.map((name) => ({ name, side: 'B' })) },
       ],
     };
-    console.log(`⚔️  PVP：【${sideA.join('、')}】 vs 【${sideB.join('、')}】× ${n} 场\n`);
+    console.log(`⚔️  PVP(${modId})：【${sideA.join('、')}】 vs 【${sideB.join('、')}】× ${n} 场\n`);
   }
 
-  // 展示双方角色卡片摘要
-  const mod = config.modId === 'normal-pvp' ? NORMAL_PVP : NORMAL_PVE;
+  // 展示双方角色卡片摘要（走模组通用接口，跨模组可用）
+  const mod: Mod = getMod(config.modId);
   for (const team of config.teams) {
     if (team.units.length === 0) continue;
     console.log(`— ${team.side} 方 —`);
     for (const u of team.units) {
-      const c = generateNormalCharacter(u.name, NORMAL_GEN_KEY, NORMAL_GEN_VERSION);
-      const six = (['str', 'wis', 'vit', 'spr', 'agi', 'luk'] as const)
-        .map((k) => `${k}:${c.base[k]}`)
+      const c = mod.generateCharacter(makeRng(hashString(`${config.modId}|${u.name}`)), { name: u.name }) as {
+        base: Record<string, number>;
+        totalCost: number;
+        abilities?: unknown[];
+        skills?: unknown[];
+      };
+      const six = Object.entries(c.base)
+        .map(([k, v]) => `${k}:${v}`)
         .join(' ');
-      console.log(`  ${u.name} [${six}] cost=${c.totalCost} 能力=${c.abilities.length}`);
+      const kitLen = (c.abilities ?? c.skills ?? []).length;
+      console.log(`  ${u.name} [${six}] cost=${c.totalCost} 技能=${kitLen}`);
     }
   }
   console.log();

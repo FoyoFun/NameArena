@@ -5,7 +5,7 @@ import { api, type ModInfo, type TeamInfo } from '../api';
 
 const router = useRouter();
 const mods = ref<ModInfo[]>([]);
-const activeMod = ref('normal-pvp');
+const activeMod = ref('fantasy-pvp');
 const pool = ref<TeamInfo[]>([]);
 const myTeams = ref<TeamInfo[]>([]);
 const attackerId = ref('');
@@ -16,7 +16,9 @@ const error = ref('');
 
 const isPve = computed(() => activeMod.value.endsWith('-pve'));
 const mod = computed(() => mods.value.find((m) => m.id === activeMod.value));
-const myModTeams = computed(() => myTeams.value.filter((t) => t.modId === activeMod.value));
+/** 同一生成域（如 fantasy-pvp / fantasy-pve）的队伍可互相出战——角色相同，无需重复建队 */
+const genKeyOf = (id: string) => id.replace(/-(pvp|pve)$/, '');
+const myModTeams = computed(() => myTeams.value.filter((t) => genKeyOf(t.modId) === genKeyOf(activeMod.value)));
 
 onMounted(async () => {
   mods.value = await api.mods();
@@ -34,7 +36,7 @@ async function refresh() {
     api.pool(activeMod.value).catch(() => []),
     api.myTeams(),
   ]);
-  const mine = myTeams.value.filter((t) => t.modId === activeMod.value);
+  const mine = myModTeams.value;
   if (!mine.some((t) => t.id === attackerId.value)) {
     attackerId.value = mine[0]?.id ?? '';
   }

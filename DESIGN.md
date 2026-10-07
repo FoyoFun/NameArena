@@ -674,3 +674,8 @@ Phase 1 计划中**尚未做**（Phase 2 内容）：房间（电子斗蛐蛐/�
 - #52 **动效 v2 = motion-web 方法论落地**（DOM+CSS 不变，决策 #9）：动效三档 token（160/340/550ms）+ 三种缓动（ease-out 默认 / ease-out-back 弹出 / ease-sharp 重击），全页禁止单一 `0.3s ease`。落地：飘字两段式（弹出过冲→上浮衰减）、暴击=抖动+缩放「镜头推近」+金闪合并进单条 transform 曲线、shake 改衰减序列、glow 类从 box-shadow 动画改为「静态阴影+opacity 衰减」（性能分级便宜档）、血条 420ms ease-out+上缘高光、KO 终结演出（放大提亮→骤暗→700ms 入灰，节拍拉长到 850ms）、开场单位卡 A 左 B 右入场+60ms 阶梯（`sibling-index()`，不支持时安全退化）、结果横幅弹出。补 `prefers-reduced-motion` 阶梯（飘字保内容不丢失）。清理窗口配套放宽：floats 1000→1250ms、vfxes 900→1050ms。
 - #53 **特效 emoji 弹出修复**：原 `.vfx-slash::after` 等选择器挂在 vfx.ts 里 `cls:''` 的死路径上，技能 emoji（⚔️🔥❄️等）实际从未显示。修复：UnitCard 渲染带 `:key="lastVfx.id"` 的 `.vfx-pop` span（theme.css 提供弹出动画），每次特效都重新触发；顺带让 hit/crit/heal 等所有注册表 emoji 一并生效。已知取舍：同类 CSS 类特效在清理窗口内连续触发只播一次（类名不移除不重触发），emoji 弹出则每次都触发。
 - #54 **播放代次 gen**：`sequencer.state.gen` 每场 play 递增，BattleStage 把它掺进单位卡 `:key`——重播同一场战斗也重建卡片、重放开场入场动画（runId 管取消、gen 管重建，两者职责分离，勿混）。
+
+第七轮（2026-10-07，幻想大乱斗模式上线与模式取舍，详见 DESIGN-FANTASY.md 决策日志 F1~F47）：
+- #55 **常规模式退场**：MODS 只注册 幻想大乱斗PVP/PVE（fantasy），常规模组代码保留在 `mods/normal/` 作框架参照实现与测试基线，不再注册、不再出现在任何 UI。历史 normal 战报仍可重演（模组代码未删）。
+- #56 **动效不跟随系统 reduced-motion**：theme.css 的无障碍阶梯原挂在 `@media (prefers-reduced-motion: reduce)` 上，实测主人的 Windows 环境 `reduce=true`（系统"动画效果"关闭），战斗动效全部被压成 0.01ms——表现即"动效没了"。改挂 `html[data-motion='reduced']` 手动降级钩子，动画默认恒开（游戏动画即内容）。
+- #57 **界面信息裁剪**：玩家只看基础六维——战斗属性、随机池技能、cost 一律不在 UI 显示（StatMeta 全 hidden / derivedRows=[] / 技能只留职业本体），数值仍参与结算；战斗页顶栏新增「行动 当前/最大」显示（fantasy 的行动时钟，四舍五入）。

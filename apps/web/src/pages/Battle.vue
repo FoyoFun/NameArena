@@ -12,7 +12,7 @@ import BattleLog from '../battle-stage/BattleLog.vue';
 const route = useRoute();
 const error = ref('');
 const loading = ref(true);
-const modId = ref('normal-pvp');
+const modId = ref('fantasy-pvp');
 const speed = ref(1);
 const copied = ref(false);
 
@@ -37,12 +37,12 @@ async function startFromId(id: string): Promise<void> {
   lastKey = route.fullPath;
   setLastBattlePath(route.fullPath);
   loading.value = false;
-  void sequencer.play(events);
+  void sequencer.play(events, m.display);
 }
 
-/** 本地快斗：种子掺时间戳，每次都是新战斗 */
+/** 本地快斗：种子掺时间戳，每次都是新战斗。fantasy 支持从取名实验室带来性别/职业选择（ga/ja/gb/jb） */
 function startLocalBattle(): void {
-  const q = route.query as { a?: string; b?: string; modId?: string };
+  const q = route.query as { a?: string; b?: string; modId?: string; ga?: string; ja?: string; gb?: string; jb?: string };
   modId.value = (q.modId as string) ?? 'normal-pvp';
   const m = getMod(modId.value);
   const parse = (s?: string) =>
@@ -56,12 +56,20 @@ function startLocalBattle(): void {
     const v = validateName(n);
     if (!v.ok) throw new Error(v.reason);
   }
+  const optsOf = (g?: string, j?: string): Record<string, unknown> | undefined => {
+    const opts: Record<string, unknown> = {};
+    if (g) opts['gender'] = g;
+    if (j) opts['jobId'] = j;
+    return Object.keys(opts).length ? opts : undefined;
+  };
+  const aOpts = optsOf(q.ga, q.ja);
+  const bOpts = optsOf(q.gb, q.jb);
   const config: BattleConfig = {
     modId: modId.value,
     kind: 'async',
     teams: [
-      { side: 'A', units: aNames.map((name) => ({ name, side: 'A' })) },
-      { side: 'B', units: bNames.map((name) => ({ name, side: 'B' })) },
+      { side: 'A', units: aNames.map((name) => ({ name, side: 'A', opts: aOpts })) },
+      { side: 'B', units: bNames.map((name) => ({ name, side: 'B', opts: bOpts })) },
     ],
   };
   const err = m.team.validateTeams(config.teams);
@@ -71,7 +79,7 @@ function startLocalBattle(): void {
   lastKey = route.fullPath;
   setLastBattlePath(route.fullPath);
   loading.value = false;
-  void sequencer.play(events);
+  void sequencer.play(events, m.display);
 }
 
 async function syncFromRoute(): Promise<void> {
@@ -110,7 +118,7 @@ watch(
 
 async function replay() {
   sequencer.setSpeed(speed.value);
-  await sequencer.play(lastEvents);
+  await sequencer.play(lastEvents, mod.value?.display ?? undefined);
 }
 
 function toggleSpeed() {
@@ -145,9 +153,10 @@ const resultText = computed(() => {
   if (!r) return '';
   const units = sequencer.state.units;
   const winnerNames = r.winner ? units.filter((u) => u.side === r.winner).map((u) => u.name).join('、') : '';
-  if (!r.winner) return `🤝 平局（${r.rounds} 回合）`;
+  const unit = mod.value?.display.roundLabel ?? '回合';
+  if (!r.winner) return `🤝 平局（${r.rounds} ${unit}）`;
   const reason = r.reason === 'wipe' ? '全歼' : '判定';
-  return `🏆 ${winnerNames} 获胜（${reason}，${r.rounds} 回合）`;
+  return `🏆 ${winnerNames} 获胜（${reason}，${r.rounds} ${unit}）`;
 });
 </script>
 
@@ -160,6 +169,7 @@ const resultText = computed(() => {
         <button class="btn small" @click="replay">🔄 重播</button>
         <button class="btn small" @click="toggleSpeed">{{ speed }}x</button>
         <button class="btn small" @click="skip">⏭ 跳过</button>
+        <span v-if="sequencer.state.cap" class="tag" title="当前已用行动数 / 最大行动数">⚔️ 行动 {{ sequencer.state.actions }}/{{ sequencer.state.cap }}</span>
       </div>
       <button class="btn small primary" @click="copyReport">{{ copied ? '✓ 已复制' : '📋 复制战报' }}</button>
     </div>
@@ -168,7 +178,7 @@ const resultText = computed(() => {
       {{ resultText }}
     </div>
 
-    <BattleStage :stats-meta="mod.stats" />
+    <BattleStage :stats-meta="mod.stats" :display="mod.display" />
 
     <div class="panel" style="margin-top: 12px">
       <BattleLog />

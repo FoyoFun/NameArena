@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { generateNormalCharacter, validateName } from '@namearena/core';
-import type { Character } from '@namearena/core';
+import { fantasySeed, getMod, JOBS, makeRng, nameSeed, validateName } from '@namearena/core';
 import { api, type ModInfo } from '../api';
 import CharacterPanel from '../components/CharacterPanel.vue';
 
 const router = useRouter();
 const mods = ref<ModInfo[]>([]);
-const activeMod = ref('normal-pvp');
+const activeMod = ref('fantasy-pvp');
 const nameA = ref('张三');
 const nameB = ref('李四');
-const charA = ref<Character | null>(null);
-const charB = ref<Character | null>(null);
+const charA = ref<unknown | null>(null);
+const charB = ref<unknown | null>(null);
 const error = ref('');
+
+/** 性别/职业选择（主人裁定 F42：可选、参与种子、无属性偏置；'' = 随机） */
+const selA = reactive({ gender: '', jobId: '' });
+const selB = reactive({ gender: '', jobId: '' });
 
 onMounted(async () => {
   try {
@@ -24,10 +27,26 @@ onMounted(async () => {
 });
 
 const mod = computed(() => mods.value.find((m) => m.id === activeMod.value));
+const isFantasy = computed(() => activeMod.value.startsWith('fantasy'));
 
-/** 生成域（DESIGN.md 决策 #26）：同域模组同名同角色；没拿到模组表时用常规域兜底 */
-const genKey = computed(() => mod.value?.genKey ?? 'normal');
-const genVersion = computed(() => mod.value?.genVersion ?? 2);
+function optsOf(sel: { gender: string; jobId: string }): Record<string, unknown> | undefined {
+  const opts: Record<string, unknown> = {};
+  if (sel.gender) opts['gender'] = sel.gender;
+  if (sel.jobId) opts['jobId'] = sel.jobId;
+  return Object.keys(opts).length ? opts : undefined;
+}
+
+/** 按当前模组生成角色（同名同选同域同版本必同角色）。
+ *  生成器走 core 的 getMod——客户端与服务器同一份模组代码。 */
+function generateFor(name: string, sel: { gender: string; jobId: string }): unknown {
+  const m = getMod(activeMod.value);
+  const opts = optsOf(sel);
+  // fantasy 的选择参与种子（fantasySeed）；其他模组无选项概念
+  const seed = isFantasy.value
+    ? fantasySeed(name, m.genKey, m.genVersion, opts as Parameters<typeof fantasySeed>[3])
+    : nameSeed(name, m.genKey, m.genVersion);
+  return m.generateCharacter(makeRng(seed), { name, opts });
+}
 
 /** 主人要求：输入后点击按钮才生成，带一点开盲盒的仪式感（DESIGN.md #42） */
 function generate() {
@@ -42,8 +61,8 @@ function generate() {
     error.value = `名字 B：${vb.reason}`;
     return;
   }
-  charA.value = generateNormalCharacter(va.name, genKey.value, genVersion.value);
-  charB.value = generateNormalCharacter(vb.name, genKey.value, genVersion.value);
+  charA.value = generateFor(va.name, selA);
+  charB.value = generateFor(vb.name, selB);
 }
 
 const RANDOM_POOL = [
@@ -75,10 +94,14 @@ function quickBattle(): void {
     return;
   }
   error.value = '';
-  router.push({
-    path: '/battle/local',
-    query: { a: a.name, b: b.name, modId: activeMod.value, t: String(Date.now()) },
-  });
+  const query: Record<string, string> = { a: a.name, b: b.name, modId: activeMod.value, t: String(Date.now()) };
+  if (isFantasy.value) {
+    if (selA.gender) query['ga'] = selA.gender;
+    if (selA.jobId) query['ja'] = selA.jobId;
+    if (selB.gender) query['gb'] = selB.gender;
+    if (selB.jobId) query['jb'] = selB.jobId;
+  }
+  router.push({ path: '/battle/local', query });
 }
 </script>
 
@@ -108,11 +131,38 @@ function quickBattle(): void {
       <button class="btn" @click="quickBattle">快斗一场</button>
     </div>
     <div v-if="error" class="error-text" style="margin-top: 6px">{{ error }}</div>
+    <template v-if="isFantasy">
+      <div class="row" style="margin-top: 8px; flex-wrap: wrap">
+        <span class="muted" style="min-width: 48px">A 选</span>
+        <select v-model="selA.gender" class="input" style="width: 90px">
+          <option value="">性别随机</option>
+          <option value="male">♂男</option>
+          <option value="female">♀女</option>
+        </select>
+        <select v-model="selA.jobId" class="input" style="width: 120px">
+          <option value="">职业随机</option>
+          <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
+        </select>
+        <span class="muted" style="margin-left: auto">选择参与随机、不偏置属性</span>
+      </div>
+      <div class="row" style="margin-top: 6px; flex-wrap: wrap">
+        <span class="muted" style="min-width: 48px">B 选</span>
+        <select v-model="selB.gender" class="input" style="width: 90px">
+          <option value="">性别随机</option>
+          <option value="male">♂男</option>
+          <option value="female">♀女</option>
+        </select>
+        <select v-model="selB.jobId" class="input" style="width: 120px">
+          <option value="">职业随机</option>
+          <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
+        </select>
+      </div>
+    </template>
   </div>
 
   <div class="lab-grid">
     <div v-for="(c, idx) in [charA, charB]" :key="idx" class="panel">
-      <CharacterPanel v-if="c" :char="c" />
+      <CharacterPanel v-if="c" :char="c" :mod-id="activeMod" />
       <div v-else class="muted empty" style="padding: 50px 0">
         {{ idx === 0 ? '输入名字，点击「✨ 生成角色」' : '右边也来一个' }}<br />
         <span style="font-size: 12px">说不定就出了个传奇</span>

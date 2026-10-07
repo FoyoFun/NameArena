@@ -63,6 +63,17 @@ export function bossCharacter(def: BossDef): Character {
 export function unitSnapshot(unit: UnitRuntime) {
   const char = unit.char as Character;
   const p = PERSONALITY_MAP.get(char.personalityId);
+  const abilities = char.abilities.map((ca) => {
+    const def = getAbility(ca.id);
+    return {
+      id: ca.id,
+      name: def?.name ?? ca.id,
+      desc: def?.desc ?? '',
+      kind: def?.kind ?? 'passive',
+      source: ca.source,
+      cost: def?.cost ?? 0,
+    };
+  });
   return {
     uid: unit.uid,
     side: unit.side,
@@ -71,20 +82,13 @@ export function unitSnapshot(unit: UnitRuntime) {
     personalityId: char.personalityId,
     personalityName: p ? `${p.emoji}${p.name}` : char.personalityId,
     personalityDesc: p?.desc ?? '',
+    tags: [p ? `${p.emoji}${p.name}` : ''].filter(Boolean),
     stats: { ...unit.stats },
     base: { ...char.base },
     tiers: { ...char.tiers },
-    abilities: char.abilities.map((ca) => {
-      const def = getAbility(ca.id);
-      return {
-        id: ca.id,
-        name: def?.name ?? ca.id,
-        desc: def?.desc ?? '',
-        kind: def?.kind ?? 'passive',
-        source: ca.source,
-        cost: def?.cost ?? 0,
-      };
-    }),
+    // skills 为通用字段名（ModDisplay 契约）；abilities 保留兼容旧消费点
+    skills: abilities,
+    abilities,
     totalCost: char.totalCost,
   };
 }

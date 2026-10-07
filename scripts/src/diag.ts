@@ -5,14 +5,14 @@ import type { BattleConfig } from '@namearena/core';
 
 function main() {
   const config: BattleConfig = {
-    modId: 'normal-pvp',
+    modId: 'fantasy-pvp',
     kind: 'async',
     teams: [
       { side: 'A', units: [{ name: '王润新', side: 'A' }, { name: '莫林轲', side: 'A' }] },
       { side: 'B', units: [{ name: '牢大', side: 'B' }, { name: '牢勇', side: 'B' }] },
     ],
   };
-  const mod = getMod('normal-pvp');
+  const mod = getMod('fantasy-pvp');
   let checked = 0;
   let violations = 0;
 

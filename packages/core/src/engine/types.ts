@@ -9,8 +9,55 @@ export interface StatMeta {
   show: 'bar' | 'pill' | 'hidden';
   /** bar 最大值（如 maxHp）或格式化提示 */
   barMaxStat?: string;
+  /** 数值格式：pct=百分比（×100 显示），flat=原值（默认） */
+  format?: 'pct' | 'flat';
   color?: string;
   desc?: string;
+}
+
+// ---------- 模组展示适配（取名实验室 / 角色卡 / 战斗页共用） ----------
+
+export interface SixStatMeta {
+  /** 角色 base 六维的键（模组自定义，展示顺序即数组顺序） */
+  key: string;
+  label: string;
+  /** 单字短标签（战斗卡六维行用） */
+  short: string;
+}
+
+export interface DisplayRow {
+  label: string;
+  value: string;
+}
+
+export interface DisplaySkill {
+  id: string;
+  name: string;
+  desc: string;
+  kind: 'active' | 'passive';
+  cost: number;
+}
+
+export interface StatusBrief {
+  name: string;
+  kind: 'buff' | 'debuff';
+}
+
+/** 模组把"自己的角色/状态"翻译成前端可渲染的通用形态（StatMeta 思路的延伸） */
+export interface ModDisplay {
+  sixStats: SixStatMeta[];
+  /** 分档 id → 标签（六维悬停提示） */
+  tierLabel(id: string): string;
+  /** 角色战斗属性行（取名实验室 / 队伍详情） */
+  derivedRows(char: unknown): DisplayRow[];
+  /** 角色技能卡 */
+  skills(char: unknown): DisplaySkill[];
+  /** 角色头部副标签（normal=性格；fantasy=职业/性别） */
+  tags(char: unknown): string[];
+  /** 状态 id → 名称/增减益（事件缺自描述字段时的兜底） */
+  statusBrief(id: string): StatusBrief | undefined;
+  /** 计数单位文案（normal=回合，fantasy=行动） */
+  roundLabel: string;
 }
 
 /** 事件附带的表现描述（纯数据）。模组"点菜"，框架负责渲染。 */
@@ -56,6 +103,8 @@ export interface UnitConfig {
   side: string;
   /** 展示用所属者（昵称#编号），仅展示 */
   owner?: string;
+  /** 角色生成选项（模组自解释，如 fantasy 的性别/职业选择）；不选则由模组随机 */
+  opts?: Record<string, unknown>;
 }
 
 export interface TeamConfig {
@@ -112,6 +161,8 @@ export interface BattleState {
 
 export interface GenOptions {
   name: string;
+  /** 角色生成选项（模组自解释；fantasy：gender/jobId）。缺省=完全随机 */
+  opts?: Record<string, unknown>;
 }
 
 export interface TeamRule {
@@ -140,12 +191,26 @@ export interface Mod {
   genVersion: number;
   /** 数值体系元数据：有哪些数值、UnitCard 怎么展示 */
   stats: StatMeta[];
+  /** 展示适配：角色/状态如何翻译成通用 UI 形态（取名实验室、角色卡共用） */
+  display: ModDisplay;
   /** 名字 → 角色（模组内自行取种子，通常用 nameSeed(name, genKey, genVersion)） */
   generateCharacter(rng: Rng, opts: GenOptions): unknown;
   rules: Ruleset;
   team: TeamRule;
   /** PVE 实例：按 bossId 产出固定敌方单位 */
   pveEnemies?: (bossId: string) => UnitConfig[];
+  /** PVE 实例：Boss 清单（供 /api/mods 与讨伐 UI 列表用） */
+  pveBosses?: () => PveBossBrief[];
+  /** 角色生成选项校验（建队时调用；返回错误文案或 null=通过） */
+  validateGenOpts?(opts: Record<string, unknown> | undefined): string | null;
+}
+
+/** PVE Boss 摘要（列表展示用） */
+export interface PveBossBrief {
+  id: string;
+  name: string;
+  title: string;
+  desc: string;
 }
 
 export interface Ruleset {

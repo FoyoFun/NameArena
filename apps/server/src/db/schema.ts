@@ -49,3 +49,20 @@ export const ladder = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.modId, t.name] })],
 );
+
+/** PVE 讨伐记录（DESIGN-FANTASY.md §6.4 排行榜）：一次讨伐 = 一条记录 */
+export const pveRecords = sqliteTable('pve_records', {
+  id: text('id').primaryKey(),
+  battleId: text('battle_id').notNull(),
+  modId: text('mod_id').notNull(),
+  bossId: text('boss_id').notNull(),
+  /** 进攻方队伍快照（队伍可能被删，展示自足） */
+  teamNames: text('team_names').notNull(),
+  owner: text('owner').notNull(),
+  win: integer('win').notNull(),
+  /** 行动数（计权后取整） */
+  actions: integer('actions').notNull(),
+  /** 己方分数 0~100 */
+  score: integer('score').notNull(),
+  createdAt: text('created_at').notNull(),
+});

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onActivated, ref } from 'vue';
+import { getMod } from '@namearena/core';
 import { api, type BattleListItem } from '../api';
 
 const list = ref<BattleListItem[]>([]);
@@ -19,6 +20,15 @@ onActivated(load);
 function time(t: string): string {
   return new Date(t).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
+
+/** 计数单位随模组（normal=回合，fantasy=行动） */
+function roundLabel(modId: string): string {
+  try {
+    return getMod(modId).display.roundLabel;
+  } catch {
+    return '回合';
+  }
+}
 </script>
 
 <template>
@@ -36,7 +46,7 @@ function time(t: string): string {
           </div>
           <div style="text-align: right">
             <span class="tag" :class="{ gold: b.winner === 'A' }">{{ b.winner === 'A' ? 'A 胜' : b.winner === 'B' ? 'B 胜' : '平局' }}</span>
-            <span class="muted" style="margin-left: 6px">{{ b.rounds }}回合</span>
+            <span class="muted" style="margin-left: 6px">{{ b.rounds }}{{ roundLabel(b.modId) }}</span>
           </div>
         </div>
         <div class="muted" style="font-size: 11px; margin-top: 2px">

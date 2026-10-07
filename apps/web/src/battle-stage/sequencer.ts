@@ -1,11 +1,11 @@
 import { reactive } from 'vue';
-import type { BattleEvent } from '@namearena/core';
-import { STATUS_MAP } from '@namearena/core';
+import type { BattleEvent, ModDisplay } from '@namearena/core';
 
 /**
  * 战斗播放状态机（表现框架的核心，DESIGN.md 5.4）。
  * 消费事件流 → 维护可渲染状态（单位卡/飘字/VFX/战报）。
  * 直播、回放、历史重演共用这一套；播放节奏由客户端决定。
+ * 模组差异（状态名/计数单位）经 ModDisplay 翻译，play 时传入。
  */
 
 export interface UnitViewState {
@@ -13,12 +13,14 @@ export interface UnitViewState {
   side: string;
   name: string;
   owner: string;
-  personalityName: string;
-  personalityDesc: string;
+  /** 副标签（normal=性格；fantasy=职业/性别）——快照自带，兼容旧快照时回退 */
+  tags: string[];
+  personalityName?: string;
+  personalityDesc?: string;
   stats: Record<string, number>;
   base: Record<string, number>;
   tiers: Record<string, string>;
-  abilities: { id: string; name: string; desc: string; kind: string; source: string; cost: number }[];
+  skills: { id: string; name: string; desc: string; kind: string; source?: string; cost: number }[];
   totalCost: number;
   statuses: { id: string; name: string; kind: string; remain: number }[];
   down: boolean;
@@ -64,6 +66,9 @@ export class Sequencer {
     finished: false,
     round: 0,
     speed: 1,
+    /** 行动数时钟（fantasy）：当前已用行动数（四舍五入）与封顶，来自 actionStart/battleStart 事件 */
+    actions: 0,
+    cap: null as number | null,
     /** 播放代次：每场 play 递增。BattleStage 用它掺进单位卡 key，重播时重建卡片重放入场动画 */
     gen: 0,
     result: null as null | { winner: string | null; rounds: number; reason: string },
@@ -77,6 +82,8 @@ export class Sequencer {
    * （DESIGN.md #45）。⚠️ reset 千万不要动 runId，否则当前 play 会误杀自己。
    */
   private runId = 0;
+  /** 当前场次的模组展示适配（状态名/计数单位随模组） */
+  private display: ModDisplay | null = null;
 
   reset(): void {
     this.state.units = [];
@@ -86,6 +93,8 @@ export class Sequencer {
     this.state.playing = false;
     this.state.finished = false;
     this.state.round = 0;
+    this.state.actions = 0;
+    this.state.cap = null;
     this.state.result = null;
     this.skipFlag = false;
     this.waiters = [];
@@ -104,8 +113,9 @@ export class Sequencer {
     this.state.speed = s;
   }
 
-  async play(events: BattleEvent[]): Promise<void> {
+  async play(events: BattleEvent[], display?: ModDisplay): Promise<void> {
     const myRun = ++this.runId; // 使任何尚在运行的旧播放循环失效
+    this.display = display ?? null;
     this.reset();
     if (this.runId !== myRun) return; // 极端竞态下直接让位
     this.state.gen++;
@@ -177,16 +187,24 @@ export class Sequencer {
 
     switch (ev.type) {
       case 'battleStart': {
-        this.state.units = (ev.payload['units'] as UnitViewState[]).map((u) => ({
+        this.state.units = (ev.payload['units'] as Partial<UnitViewState>[]).map((u) => ({
           ...u,
+          tags: u.tags ?? (u.personalityName ? [u.personalityName] : []),
+          skills: u.skills ?? [],
           statuses: [],
           down: false,
-        }));
+        })) as UnitViewState[];
+        this.state.cap = (ev.payload['cap'] as number | undefined) ?? null;
+        this.state.actions = 0;
         this.addVfx('stage', 'stage');
         break;
       }
       case 'roundStart': {
         this.state.round = ev.payload['round'] as number;
+        break;
+      }
+      case 'actionStart': {
+        this.state.actions = Math.round((ev.payload['actions'] as number) ?? 0);
         break;
       }
       case 'skillUse': {
@@ -231,9 +249,11 @@ export class Sequencer {
         const statusId = ev.payload['status'] as string;
         const u = this.unit(uid);
         if (u && !u.statuses.some((s) => s.id === statusId)) {
-          const def = STATUS_MAP.get(statusId);
-          u.statuses.push({ id: statusId, name: def?.name ?? statusId, kind: def?.kind ?? 'buff', remain: 0 });
-          this.addVfx(def?.kind === 'buff' ? 'buff' : 'debuff', `unit:${uid}`);
+          // 状态名/增减益：事件自描述（kind）优先，模组 display 兜底
+          const brief = this.display?.statusBrief(statusId);
+          const kind = (ev.payload['kind'] as string) ?? brief?.kind ?? 'buff';
+          u.statuses.push({ id: statusId, name: brief?.name ?? statusId, kind, remain: 0 });
+          this.addVfx(kind === 'buff' ? 'buff' : 'debuff', `unit:${uid}`);
         }
         break;
       }

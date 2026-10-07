@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { StatMeta } from '@namearena/core';
+import type { ModDisplay, StatMeta } from '@namearena/core';
 import { sequencer } from './sequencer';
 import UnitCard from './UnitCard.vue';
 
-const props = defineProps<{ statsMeta: StatMeta[] }>();
+const props = defineProps<{ statsMeta: StatMeta[]; display: ModDisplay }>();
 
 const sideA = computed(() => sequencer.state.units.filter((u) => u.side === 'A'));
 const sideB = computed(() => sequencer.state.units.filter((u) => u.side === 'B'));
@@ -19,12 +19,12 @@ const gen = computed(() => sequencer.state.gen);
   <div class="stage" :class="{ 'vfx-stage': stageVfx }">
     <div class="side-block side-A">
       <div class="side-label">🔴 A 方</div>
-      <UnitCard v-for="(u, i) in sideA" :key="`${u.uid}-${gen}`" :unit="u" :stats-meta="props.statsMeta" :index="i" />
+      <UnitCard v-for="(u, i) in sideA" :key="`${u.uid}-${gen}`" :unit="u" :stats-meta="props.statsMeta" :display="props.display" :index="i" />
     </div>
     <div class="vs-divider">VS</div>
     <div class="side-block side-B">
       <div class="side-label">🔵 B 方</div>
-      <UnitCard v-for="(u, i) in sideB" :key="`${u.uid}-${gen}`" :unit="u" :stats-meta="props.statsMeta" :index="i" />
+      <UnitCard v-for="(u, i) in sideB" :key="`${u.uid}-${gen}`" :unit="u" :stats-meta="props.statsMeta" :display="props.display" :index="i" />
     </div>
   </div>
 </template>

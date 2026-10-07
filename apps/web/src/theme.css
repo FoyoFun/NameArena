@@ -1002,21 +1002,20 @@ table.list tbody tr:hover {
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* ---------- 无障碍：reduced-motion 阶梯 ----------
-   默认全部动画即时化；飘字保留纯透明度淡出（内容不丢失，slop B8 闸门）。 */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+/* ---------- 动效开关（F47）----------
+   不再跟随系统的 prefers-reduced-motion（Windows"动画效果"关闭曾导致战斗动效全部消失，
+   主人裁定：动画即内容，默认恒开）。需要手动关动效时，给 <html> 加 data-motion="reduced"。 */
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
 
-  .float-num {
-    animation: floatFade 1200ms linear forwards !important;
-  }
+html[data-motion='reduced'] .float-num {
+  animation: floatFade 1200ms linear forwards !important;
 }
 
 @keyframes floatFade {

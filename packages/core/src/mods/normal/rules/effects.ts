@@ -128,13 +128,13 @@ export function applyStatus(
   if (existing) {
     existing.remain = Math.max(existing.remain, duration);
     existing.power = Math.max(existing.power, power);
-    ctx.emit('statusApply', { uid: unit.uid, status: statusId, refreshed: true }, [
+    ctx.emit('statusApply', { uid: unit.uid, status: statusId, kind: def.kind, refreshed: true }, [
       { target: `unit:${unit.uid}`, durationMs: 400, logText: `@${unit.uid}@ 的【${colored}】被刷新了` },
     ]);
     return true;
   }
   unit.statuses.push({ id: statusId, remain: duration, power });
-  ctx.emit('statusApply', { uid: unit.uid, status: statusId, refreshed: false }, [
+  ctx.emit('statusApply', { uid: unit.uid, status: statusId, kind: def.kind, refreshed: false }, [
     {
       target: `unit:${unit.uid}`,
       vfx: def.kind === 'buff' ? 'buff' : 'debuff',

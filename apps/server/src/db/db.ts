@@ -54,6 +54,19 @@ CREATE TABLE IF NOT EXISTS ladder (
   losses INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (mod_id, name)
 );
+
+CREATE TABLE IF NOT EXISTS pve_records (
+  id TEXT PRIMARY KEY,
+  battle_id TEXT NOT NULL,
+  mod_id TEXT NOT NULL,
+  boss_id TEXT NOT NULL,
+  team_names TEXT NOT NULL,
+  owner TEXT NOT NULL,
+  win INTEGER NOT NULL,
+  actions INTEGER NOT NULL,
+  score INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
 `);
 
 export const db = drizzle(sqlite, { schema });

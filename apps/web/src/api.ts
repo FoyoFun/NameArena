@@ -13,11 +13,26 @@ export interface TeamInfo {
   id: string;
   modId: string;
   members: string[];
+  /** 每个成员的角色生成选项（fantasy：gender/jobId；未选择的成员为 null） */
+  memberOpts: Array<Record<string, unknown> | null>;
   owner: string;
   mine: boolean;
   wins: number;
   losses: number;
   inPool: boolean;
+  createdAt: string;
+}
+
+/** 队员提交形态：纯名字 或 名字+生成选项 */
+export type MemberInput = string | { name: string; opts?: Record<string, unknown> };
+
+export interface PveLadderRow {
+  battleId: string;
+  teamNames: string[];
+  owner: string;
+  win: boolean;
+  actions: number;
+  score: number;
   createdAt: string;
 }
 
@@ -73,7 +88,7 @@ export async function renameMe(nickname: string): Promise<Me> {
 export const api = {
   mods: () => request<ModInfo[]>('/api/mods'),
   myTeams: () => request<TeamInfo[]>('/api/teams'),
-  createTeam: (modId: string, members: string[]) => request<TeamInfo>('/api/teams', 'POST', { modId, members }),
+  createTeam: (modId: string, members: MemberInput[]) => request<TeamInfo>('/api/teams', 'POST', { modId, members }),
   deleteTeam: (id: string) => request<{ ok: boolean }>(`/api/teams/${id}`, 'DELETE'),
   pool: (modId: string) => request<TeamInfo[]>(`/api/pool?modId=${encodeURIComponent(modId)}`),
   createBattle: (payload: {
@@ -86,6 +101,8 @@ export const api = {
   battles: () => request<BattleListItem[]>('/api/battles'),
   battle: (id: string) => request<BattleRecordDto>(`/api/battles/${id}`),
   ladder: (modId: string, min = 5) => request<LadderRow[]>(`/api/ladder?modId=${encodeURIComponent(modId)}&min=${min}`),
+  pveLadder: (modId: string, bossId: string) =>
+    request<PveLadderRow[]>(`/api/pve-ladder?modId=${encodeURIComponent(modId)}&bossId=${encodeURIComponent(bossId)}`),
 };
 
 export interface ModInfo {
