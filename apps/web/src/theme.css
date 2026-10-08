@@ -1,69 +1,74 @@
 /* ============================================================
-   名字大乱斗 · 主题层 v2（DESIGN.md 决策 #20/#21）
-   换风格 = 重写本文件 + 少量组件内 scoped 样式，组件结构不动。
-   布局基准：手机竖屏优先；≥900px 增强为桌面布局。
+   名字大乱斗 · 主题层 v3（DESIGN.md 决策 #58）
+   换风格 = 重写本文件 + 少量组件内 scoped 样式，组件结构基本不动。
 
-   v2 视觉基线：Raycast 深色工具风适配版（决策日志见 DESIGN.md）。
-   - 表面阶梯 canvas #07080a → surface → elevated → card，靠明度分层
-   - 1px 发丝线描边代替粗色描边；金色为唯一品牌强调（胶囊主按钮）
-   - 功能色（阵营/增益/分档）统一「彩色文字 + 淡染底」徽章制
-   - 动效三档 token + 弹簧感缓动（参考 .design-refs/motion-web/motion-tokens.md）
-   - 分档色/字号/间距收敛为 CSS 变量，组件不再硬编码
+   v3 视觉基线：Melvor Idle 分块工具风适配版（决策 #58，滚动原则修订见 #59）。
+   - 蓝灰表面阶梯 canvas #191e27 → bg-2（侧栏/凹陷）→ panel #232a35 → panel-2，靠明度分层
+   - Melvor 签名「卡片顶部 3px 色条」：默认高光条，.ok/.danger/.gold/.info 变体
+   - 布局三原则（主人拍板）：一页显示全部信息 / 分块紧凑（密度高于 Melvor）/ 塞不下的长列表只在该模块内滚
+   - 滚动方向（#59 修订）：优先垂直滚动；横排卡片带允许水平滚动，以大的排版美观为主
+   - 图标 = game-icons.net 内联 SVG（GameIcon.vue，currentColor 着色），emoji 只留在战斗演出
+   - 品牌金 #f3b760（对齐 Melvor 金）、阵营红 #e56767 / 蓝 #5cace5、功能色「彩字+淡染底」徽章制不变
+   - 动效三档 token 沿用（决策 #52），战斗演出段（飘字/VFX/战报）全量保留
    ============================================================ */
 
 :root {
-  /* ---- 表面阶梯（由深到浅） ---- */
-  --bg: #07080a;          /* 页面画布 */
-  --bg-2: #0c0d0f;        /* 凹陷面：输入框、战报、六维格 */
-  --panel: #101113;       /* 卡片/面板 */
-  --panel-2: #17191c;     /* 可交互面：默认按钮、pill 底 */
-  --panel-hover: #1d2024; /* 可交互面的 hover */
+  /* ---- 表面阶梯（由深到浅，Melvor 蓝灰系） ---- */
+  --bg: #191e27;          /* 内容画布 */
+  --bg-2: #131721;        /* 侧栏 / 凹陷面：输入框、战报、六维格 */
+  --panel: #232a35;       /* 卡片/面板 */
+  --panel-2: #2c3440;     /* 可交互面：默认按钮、pill 底 */
+  --panel-hover: #363e4c; /* 可交互面的 hover */
 
-  /* ---- 发丝线 ---- */
-  --border: #242728;
+  /* ---- 描边：面板外缘用深色缝（卡片间 Melvor 式暗缝），内部用发丝线 ---- */
+  --border: #10141c;
   --border-soft: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.16);
 
   /* ---- 文字 ---- */
-  --text: #f4f4f6;
-  --muted: #9c9c9d;
-  --faint: #6a6b6c;
+  --text: #e9eef7;
+  --muted: #a3aebb;
+  --faint: #6f7a8a;
 
-  /* ---- 品牌强调（金，项目既有身份色） ---- */
-  --accent: #fbbf24;
-  --accent-2: #f59e0b;
-  --on-accent: #1c1400;
+  /* ---- 品牌强调（金，对齐 Melvor #f3b760） ---- */
+  --accent: #f3b760;
+  --accent-2: #e5a44e;
+  --on-accent: #241703;
 
   /* ---- 阵营与功能色（彩色文字 + 淡染底成对使用） ---- */
-  --side-a: #ff6161;
-  --side-a-bg: rgba(255, 97, 97, 0.15);
-  --side-b: #57c1ff;
-  --side-b-bg: rgba(87, 193, 255, 0.15);
-  --hp-hi: #59d499;
+  --side-a: #e56767;
+  --side-a-bg: rgba(229, 103, 103, 0.14);
+  --side-b: #5cace5;
+  --side-b-bg: rgba(92, 172, 229, 0.14);
+  --hp-hi: #46c37b;
   --hp-mid: #ffc533;
-  --hp-lo: #ff6161;
-  --mp: #57c1ff;
-  --buff: #59d499;
-  --debuff: #ff6161;
+  --hp-lo: #e56767;
+  --mp: #5cace5;
+  --buff: #46c37b;
+  --debuff: #e56767;
+  --info: #5cace5;
 
   /* ---- 六维分档色（数值来源 packages/core STAT_TIERS，收口到主题层） ---- */
-  --tier-mid: #9ca3af;
-  --tier-low: #60a5fa;
+  --tier-mid: #9aa4b2;
+  --tier-low: #5cace5;
   --tier-high: #a78bfa;
-  --tier-super: #fbbf24;
-  --tier-mythic: #f87171;
+  --tier-super: #f3b760;
+  --tier-mythic: #e56767;
   --tier-godly: #f0abfc;
 
-  /* ---- 圆角 / 间距 / 字号 ---- */
-  --radius: 10px;
+  /* ---- 圆角 / 间距 / 字号（v3.1：移动端密度对齐银河奶牛放置——13px 基准/11px 小字，
+     主人拍板：手机端以排版优先，触控目标放宽到 32px 档） ---- */
+  --radius: 8px;
   --radius-sm: 6px;
   --sp-1: 4px;
   --sp-2: 8px;
-  --sp-3: 12px;
-  --sp-4: 16px;
-  --sp-5: 24px;
-  --font-size: 14px;
-  --nav-h: 56px;
+  --sp-3: 10px;
+  --sp-4: 14px;
+  --sp-5: 20px;
+  --font-size: 13px;
+  --nav-h: 44px;      /* 移动端顶栏（模式+玩家） */
+  --side-w: 224px;    /* 桌面侧栏宽 */
+  --iconbar-w: 44px;  /* 移动端左侧 Icon 竖栏 */
 
   /* ---- 动效 token（三档时长 + 三种缓动；禁止全页一个 0.3s ease） ---- */
   --dur-1: 160ms;  /* 反馈：hover / active / 焦点 */
@@ -82,9 +87,9 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background:
-    radial-gradient(1000px 480px at 50% -120px, rgba(87, 193, 255, 0.06), transparent 70%),
-    var(--bg);
+  /* 全站只允许垂直滚动（主人拍板 #58）：横向一律裁掉 */
+  overflow-x: hidden;
+  background: var(--bg);
   color: var(--text);
   font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
   font-size: var(--font-size);
@@ -95,8 +100,6 @@ body {
 
 #app {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 h1, h2, h3 {
@@ -109,26 +112,110 @@ a {
 }
 
 ::selection {
-  background: rgba(251, 191, 36, 0.28);
+  background: rgba(243, 183, 96, 0.28);
 }
 
 :focus-visible {
-  outline: 2px solid rgba(251, 191, 36, 0.55);
+  outline: 2px solid rgba(243, 183, 96, 0.55);
   outline-offset: 2px;
+}
+
+/* ---------- 滚动条：全站统一细轨（模块内滚动也一样） ---------- */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #313a48;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #313a48 transparent;
 }
 
 /* ---------- 通用元件 ---------- */
 
+/* 卡片：Melvor 式暗缝描边 + 顶部 3px 色条（签名元素） */
 .panel {
+  position: relative;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px;
+  padding: 8px 10px;
   margin-bottom: var(--sp-3);
+  overflow: hidden;
 }
 
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+  pointer-events: none;
+}
+
+/* 顶部色条变体：进行中/达标=绿，锁定/危险=红，品牌/胜利=金，信息=蓝 */
+.panel.ok::before {
+  background: var(--hp-hi);
+}
+
+.panel.danger::before {
+  background: var(--hp-lo);
+}
+
+.panel.gold::before {
+  background: linear-gradient(90deg, var(--accent), rgba(243, 183, 96, 0.35));
+}
+
+.panel.info::before {
+  background: var(--info);
+}
+
+/* 面板头：图标 + 标题 + 右侧操作区（分块排版的標配头） */
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  min-height: 22px;
+}
+
+.panel-head .t {
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-head .t .gi {
+  color: var(--accent);
+}
+
+.panel-head .acts {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* 兼容旧标题类（未重排的组件仍可用） */
 .panel-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.02em;
   margin: 2px 0 10px;
@@ -138,16 +225,126 @@ a {
   gap: 6px;
 }
 
+/* 页面页头横条（Melvor 每页绿色题头条的克制版）：图标方块 + 标题 + 副题 + 右侧动作 */
+.page-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none; /* 定高布局里不被压缩（战斗页 battle-wrap） */
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  margin-bottom: var(--sp-3);
+  overflow: hidden;
+}
+
+.page-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), rgba(243, 183, 96, 0.3));
+  pointer-events: none;
+}
+
+.page-hero .hero-ico {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: rgba(243, 183, 96, 0.12);
+  border: 1px solid rgba(243, 183, 96, 0.3);
+  color: var(--accent);
+}
+
+.page-hero .hero-t {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.page-hero .hero-s {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.page-hero .hero-acts {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* 移动端：hero 全部内容压成一行（主人拍板 #62 补充：375 宽也要单行） */
+
+/* ---------- 布局原语（分块排版；只支持垂直方向滚动） ---------- */
+
+/* 长列表只在模块内滚：配合 max-height 或 flex:1 + min-height:0 使用 */
+.scroll-y {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  min-height: 0;
+}
+
+/* 两列分块：桌面并排铺满一屏，窄屏退化竖排 */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-3);
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .grid2 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .grid2.wide-left {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+
+  .grid2.narrow-left {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+
+/* 小卡网格（Boss 卡、队伍卡） */
+.cardgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--sp-2);
+}
+
 .btn {
   appearance: none;
-  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  border: 1px solid var(--border-strong);
   background: var(--panel-2);
   color: var(--text);
-  border-radius: 8px;
-  padding: 9px 14px;
-  font-size: 14px;
+  border-radius: var(--radius-sm);
+  padding: 5px 11px;
+  font-size: 13px;
   cursor: pointer;
-  min-height: 40px; /* 触控目标硬下限（DESIGN.md #20） */
+  min-height: 32px; /* 移动端紧凑档（主人拍板 #61：排版优先） */
   transition:
     background-color var(--dur-1) var(--ease-out),
     border-color var(--dur-1) var(--ease-out),
@@ -157,7 +354,7 @@ a {
 
 .btn:hover {
   background: var(--panel-hover);
-  border-color: var(--border-strong);
+  border-color: rgba(255, 255, 255, 0.24);
 }
 
 .btn:active {
@@ -182,15 +379,15 @@ a {
 }
 
 .btn.danger {
-  border-color: rgba(255, 97, 97, 0.4);
+  border-color: rgba(229, 103, 103, 0.4);
   background: var(--side-a-bg);
   color: var(--hp-lo);
 }
 
 .btn.small {
-  min-height: 32px;
-  padding: 4px 10px;
-  font-size: 13px;
+  min-height: 26px;
+  padding: 3px 9px;
+  font-size: 12px;
 }
 
 .btn:disabled {
@@ -202,35 +399,59 @@ a {
   transform: none;
 }
 
+/* 桌面档：密度优先 */
+@media (min-width: 900px) {
+  .btn {
+    min-height: 30px;
+    padding: 4px 12px;
+    font-size: 13px;
+  }
+
+  .btn.small {
+    min-height: 26px;
+    padding: 3px 9px;
+    font-size: 12.5px;
+  }
+}
+
 .input,
 select {
   width: 100%;
   background: var(--bg-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   color: var(--text);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 15px;
-  min-height: 42px;
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 13px;
+  min-height: 32px;
   transition: border-color var(--dur-1) var(--ease-out), box-shadow var(--dur-1) var(--ease-out);
 }
 
 .input:hover,
 select:hover {
-  border-color: var(--border-strong);
+  border-color: rgba(255, 255, 255, 0.26);
 }
 
 .input:focus,
 select:focus {
   outline: none;
-  border-color: rgba(251, 191, 36, 0.5);
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.16);
+  border-color: rgba(243, 183, 96, 0.5);
+  box-shadow: 0 0 0 3px rgba(243, 183, 96, 0.14);
 }
 
 /* 文本输入用阴影焦点环即可，避免与全局 :focus-visible 轮廓叠加 */
 .input:focus-visible,
 select:focus-visible {
   outline: none;
+}
+
+@media (min-width: 900px) {
+  .input,
+  select {
+    min-height: 30px;
+    padding: 4px 9px;
+    font-size: 13px;
+  }
 }
 
 .row {
@@ -252,7 +473,9 @@ select:focus-visible {
 
 /* 徽章制：彩色变体 = 彩色文字 + 淡染底 + 同色淡边 */
 .tag {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: 1px solid var(--border-soft);
   background: rgba(255, 255, 255, 0.05);
   border-radius: 999px;
@@ -264,19 +487,31 @@ select:focus-visible {
 
 .tag.gold {
   color: var(--accent);
-  background: rgba(251, 191, 36, 0.1);
-  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(243, 183, 96, 0.1);
+  border-color: rgba(243, 183, 96, 0.35);
 }
 
 .tag.passive {
   color: var(--side-b);
   background: var(--side-b-bg);
-  border-color: rgba(87, 193, 255, 0.35);
+  border-color: rgba(92, 172, 229, 0.35);
+}
+
+.tag.ok {
+  color: var(--hp-hi);
+  background: rgba(70, 195, 123, 0.12);
+  border-color: rgba(70, 195, 123, 0.35);
+}
+
+.tag.bad {
+  color: var(--hp-lo);
+  background: var(--side-a-bg);
+  border-color: rgba(229, 103, 103, 0.35);
 }
 
 .tag.kinds {
   min-width: 34px;
-  text-align: center;
+  justify-content: center;
 }
 
 /* 列表行（数据池 / PVE / 历史共用的「两端对齐 + 发丝线分隔」行） */
@@ -285,8 +520,12 @@ select:focus-visible {
   justify-content: space-between;
   align-items: center;
   gap: var(--sp-2);
-  padding: 8px 0;
+  padding: 7px 0;
   border-bottom: 1px solid var(--border-soft);
+}
+
+.list-row:last-child {
+  border-bottom: none;
 }
 
 /* 空状态占位 */
@@ -298,31 +537,327 @@ select:focus-visible {
 .page {
   flex: 1;
   width: 100%;
-  max-width: 860px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 12px 12px calc(var(--nav-h) + 16px); /* 底部留出移动端导航 */
+  padding: 10px 10px 16px; /* 移动端：左 Icon 栏由 .main-col 的 margin 让位 */
 }
 
-/* ---------- 顶栏 ---------- */
+/* ---------- 应用壳层：桌面左侧边栏；移动端顶栏 + 左侧 Icon 竖栏（决策 #61） ---------- */
+
+.sidebar {
+  display: none;
+}
+
+/* 移动端 Icon 竖栏：平时只显示 Icon，顶部按钮展开带文字的菜单 */
+.iconbar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--iconbar-w);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-2);
+  border-right: 1px solid var(--border);
+  z-index: 30;
+  padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+}
+
+.iconbar .ib-toggle {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-bottom: 4px;
+  transition: color var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out);
+}
+
+.iconbar .ib-toggle:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.iconbar .ib-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.iconbar .ib-item {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+  transition: color var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out);
+}
+
+.iconbar .ib-item:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.iconbar .ib-item.router-link-active {
+  color: var(--accent);
+  background: rgba(243, 183, 96, 0.12);
+}
+
+/* 播放中的红点：icon 右上角 */
+.iconbar .live-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+/* 展开的完整菜单：覆盖在内容上方，点击项后收起 */
+.iconbar.ib-menu {
+  position: fixed;
+  left: var(--iconbar-w);
+  top: 0;
+  bottom: 0;
+  width: 148px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  box-shadow: 8px 0 24px rgba(0, 0, 0, 0.4);
+  z-index: 29;
+  display: flex;
+  flex-direction: column;
+  padding: 46px 8px 8px; /* 顶部让开 Icon 栏的开关钮 */
+  animation: ibIn var(--dur-1) var(--ease-out);
+}
+
+@keyframes ibIn {
+  from { opacity: 0; transform: translateX(-8px); }
+}
+
+.iconbar.ib-menu a,
+.iconbar.ib-menu .navbtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 13px;
+  transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+
+.iconbar.ib-menu a:hover,
+.iconbar.ib-menu .navbtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.iconbar.ib-menu a.router-link-active {
+  background: rgba(243, 183, 96, 0.12);
+  color: var(--accent);
+}
+
+.iconbar.ib-menu .ib-tools {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 主列让位 Icon 栏 */
+.main-col {
+  padding-left: var(--iconbar-w);
+}
+
+/* ---------- 桌面壳层 ---------- */
+
+@media (min-width: 900px) {
+  .app-shell {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: var(--side-w);
+    flex: none;
+    background: var(--bg-2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .main-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .page {
+    padding: 14px 18px 40px;
+  }
+
+  :root {
+    --nav-h: 0px;
+  }
+}
+
+/* 侧栏品牌 */
+.side-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.4px;
+}
+
+.side-logo .mark {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: rgba(243, 183, 96, 0.14);
+  border: 1px solid rgba(243, 183, 96, 0.35);
+  color: var(--accent);
+}
+
+.side-logo .logo-word {
+  background: linear-gradient(135deg, var(--accent), #ffe3ad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 侧栏玩家条 */
+.side-me {
+  margin: 0 10px 8px;
+  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-out);
+}
+
+.side-me:hover {
+  border-color: rgba(243, 183, 96, 0.4);
+}
+
+.side-me .gi {
+  color: var(--faint);
+}
+
+.side-me .nm2 {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-me .hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+/* 侧栏导航分组（Melvor 式小节标签） */
+.nav-group {
+  padding: 8px 14px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--faint);
+}
+
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 0 8px 12px;
+}
+
+.side-nav a,
+.side-nav .navbtn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 13.5px;
+  transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+
+.side-nav a .gi,
+.side-nav .navbtn .gi {
+  color: var(--faint);
+  transition: color var(--dur-1) var(--ease-out);
+}
+
+.side-nav a:hover,
+.side-nav .navbtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.side-nav a:hover .gi,
+.side-nav .navbtn:hover .gi {
+  color: var(--text);
+}
+
+.side-nav a.router-link-active {
+  background: rgba(243, 183, 96, 0.12);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.side-nav a.router-link-active .gi {
+  color: var(--accent);
+}
+
+/* ---------- 顶栏（移动端） ---------- */
 
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--border);
-  background: rgba(7, 8, 10, 0.82);
+  background: rgba(19, 23, 33, 0.9);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
   z-index: 20;
+  min-height: var(--nav-h);
 }
 
 .logo {
   font-weight: 800;
   font-size: 17px;
   letter-spacing: 0.5px;
-  background: linear-gradient(135deg, var(--accent), #fff3c4);
+  background: linear-gradient(135deg, var(--accent), #ffe3ad);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -343,77 +878,6 @@ select:focus-visible {
   color: var(--accent);
 }
 
-/* ---------- 底部导航（移动端）/ 顶部导航（桌面） ---------- */
-
-.navbar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: var(--nav-h);
-  display: flex;
-  background: rgba(7, 8, 10, 0.95);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--border);
-  z-index: 20;
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.navbar a {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  color: var(--muted);
-  font-size: 11px;
-  transition: color var(--dur-1) var(--ease-out);
-}
-
-.navbar a .ico {
-  font-size: 19px;
-  line-height: 1.1;
-}
-
-.navbar a.router-link-active {
-  color: var(--accent);
-}
-
-@media (min-width: 900px) {
-  :root {
-    --font-size: 15px;
-    --nav-h: 0px;
-  }
-
-  .page {
-    padding-bottom: 40px;
-  }
-
-  .navbar {
-    position: static;
-    height: auto;
-    justify-content: center;
-    gap: 6px;
-    padding: 6px;
-    border-top: none;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .navbar a {
-    flex: 0 0 auto;
-    flex-direction: row;
-    gap: 6px;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 14px;
-  }
-
-  .navbar a.router-link-active {
-    background: rgba(251, 191, 36, 0.1);
-  }
-}
-
 /* ---------- 战斗舞台（竖屏优先：敌上我下；桌面左右对峙） ---------- */
 
 .stage {
@@ -428,67 +892,6 @@ select:focus-visible {
   gap: var(--sp-2);
 }
 
-/* 阵营标签：阵营色小字居中 */
-.side-label {
-  text-align: center;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-}
-
-.side-block.side-A .side-label {
-  color: var(--side-a);
-}
-
-.side-block.side-B .side-label {
-  color: var(--side-b);
-}
-
-/* VS 分隔：两侧发丝线，桌面转纵向 */
-.stage .vs-divider {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--faint);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  padding: 2px 0;
-}
-
-.stage .vs-divider::before,
-.stage .vs-divider::after {
-  content: '';
-  height: 1px;
-  flex: 1;
-  background: var(--border-soft);
-}
-
-@media (min-width: 900px) {
-  .stage {
-    flex-direction: row;
-    align-items: stretch;
-  }
-
-  .stage .side-block {
-    flex: 1;
-  }
-
-  .stage .vs-divider {
-    flex-direction: column;
-    align-self: center;
-    writing-mode: vertical-lr;
-    padding: 0 4px;
-  }
-
-  .stage .vs-divider::before,
-  .stage .vs-divider::after {
-    width: 1px;
-    height: auto;
-    flex: 0 0 20px;
-  }
-}
-
 /* ---------- 单位卡 ---------- */
 
 .unit-card {
@@ -496,18 +899,29 @@ select:focus-visible {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 9px 11px;
+  padding: 8px 10px;
   overflow: hidden;
   /* 阵亡入灰渐变（配合 vfx-ko 的亮度回落） */
   transition: filter 700ms var(--ease-out);
 }
 
-.unit-card.side-A {
-  border-left: 3px solid var(--side-a);
+.unit-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--border-soft);
+  pointer-events: none;
 }
 
-.unit-card.side-B {
-  border-left: 3px solid var(--side-b);
+.unit-card.side-A::before {
+  background: var(--side-a);
+}
+
+.unit-card.side-B::before {
+  background: var(--side-b);
 }
 
 /* 阵亡：KO 演出后慢慢入灰（transition 由 vfx-ko 触发亮度回落时自然衔接） */
@@ -524,7 +938,7 @@ select:focus-visible {
 
 .unit-card .name {
   font-weight: 700;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .unit-card .owner {
@@ -557,7 +971,7 @@ select:focus-visible {
 }
 
 /* 六维分档色（UnitCard 六维格与取名实验室面板共用） */
-.tier-num { font-weight: 800; font-size: 18px; }
+.tier-num { font-weight: 800; font-size: 17px; }
 .tier-mid    { color: var(--tier-mid); }
 .tier-low    { color: var(--tier-low); }
 .tier-high   { color: var(--tier-high); }
@@ -566,8 +980,9 @@ select:focus-visible {
 .tier-godly  { color: var(--tier-godly); }
 
 .bar {
-  height: 10px; /* 血条高度硬下限（DESIGN.md #20） */
-  background: rgba(255, 255, 255, 0.07);
+  height: 12px; /* 血条高度硬下限（DESIGN.md #20） */
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-soft);
   border-radius: 999px;
   overflow: hidden;
   margin-top: 5px;
@@ -585,10 +1000,13 @@ select:focus-visible {
 .bar .bar-label {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   font-size: 10px;
   line-height: 10px;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
@@ -600,6 +1018,9 @@ select:focus-visible {
 }
 
 .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-soft);
@@ -631,14 +1052,14 @@ select:focus-visible {
 
 .status-ico.buff {
   color: var(--buff);
-  background: rgba(89, 212, 153, 0.12);
-  border-color: rgba(89, 212, 153, 0.35);
+  background: rgba(70, 195, 123, 0.12);
+  border-color: rgba(70, 195, 123, 0.35);
 }
 
 .status-ico.debuff {
   color: var(--debuff);
-  background: rgba(255, 97, 97, 0.12);
-  border-color: rgba(255, 97, 97, 0.35);
+  background: rgba(229, 103, 103, 0.12);
+  border-color: rgba(229, 103, 103, 0.35);
 }
 
 /* ---------- 飘字 ---------- */
@@ -669,7 +1090,7 @@ select:focus-visible {
   animation-duration: 1.15s;
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 0.9),
-    0 0 14px rgba(251, 191, 36, 0.55),
+    0 0 14px rgba(243, 183, 96, 0.55),
     0 2px 8px rgba(0, 0, 0, 0.7);
 }
 
@@ -741,20 +1162,20 @@ select:focus-visible {
 }
 
 .vfx-heal::before {
-  box-shadow: inset 0 0 0 1px rgba(89, 212, 153, 0.5), inset 0 0 18px rgba(89, 212, 153, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(70, 195, 123, 0.5), inset 0 0 18px rgba(70, 195, 123, 0.16);
 }
 
 .vfx-buff::before {
-  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.5), inset 0 0 18px rgba(251, 191, 36, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(243, 183, 96, 0.5), inset 0 0 18px rgba(243, 183, 96, 0.14);
 }
 
 .vfx-debuff::before {
-  box-shadow: inset 0 0 0 1px rgba(255, 97, 97, 0.5), inset 0 0 18px rgba(255, 97, 97, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(229, 103, 103, 0.5), inset 0 0 18px rgba(229, 103, 103, 0.14);
 }
 
 .vfx-revive::before {
   animation-duration: 1000ms;
-  box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.6), inset 0 0 26px rgba(251, 191, 36, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(243, 183, 96, 0.6), inset 0 0 26px rgba(243, 183, 96, 0.2);
 }
 
 /* KO 终结演出：先过盈放大 + 提亮，再骤暗回落，衔接 .down 的入灰 */
@@ -806,7 +1227,7 @@ select:focus-visible {
 }
 
 @keyframes flashGold {
-  0% { background-color: rgba(251, 191, 36, 0.22); }
+  0% { background-color: rgba(243, 183, 96, 0.22); }
   100% { background-color: transparent; }
 }
 
@@ -838,29 +1259,14 @@ select:focus-visible {
 /* ---------- 战报 ---------- */
 
 .battle-log {
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px 12px;
-  max-height: 320px;
-  overflow-y: auto;
-  font-size: 13px;
-  line-height: 1.9;
-  scrollbar-width: thin;
-  scrollbar-color: #2a2d31 transparent;
-}
-
-.battle-log::-webkit-scrollbar {
-  width: 8px;
-}
-
-.battle-log::-webkit-scrollbar-thumb {
-  background: #2a2d31;
-  border-radius: 999px;
-}
-
-.battle-log::-webkit-scrollbar-track {
   background: transparent;
+  padding: 2px 4px;
+  max-height: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* 战报密度对齐参考游戏（主人拍板 #62）：移动 11px、桌面 12.5px，行高收紧 */
+  font-size: 11px;
+  line-height: 1.55;
 }
 
 .battle-log .line {
@@ -917,7 +1323,7 @@ select:focus-visible {
 
 .ability-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: var(--sp-2);
   margin-top: 6px;
 }
@@ -925,8 +1331,8 @@ select:focus-visible {
 .ability-card {
   background: var(--bg-2);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
-  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
 }
 
 .ability-card .head {
@@ -959,13 +1365,17 @@ select:focus-visible {
 
 .result-banner {
   text-align: center;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
-  border-color: rgba(251, 191, 36, 0.45);
+  border-color: rgba(243, 183, 96, 0.45);
   background:
-    linear-gradient(180deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.02)),
+    linear-gradient(180deg, rgba(243, 183, 96, 0.1), rgba(243, 183, 96, 0.02)),
     var(--panel);
   animation: resultIn 500ms var(--ease-out-back);
+}
+
+.result-banner::before {
+  background: linear-gradient(90deg, var(--accent), rgba(243, 183, 96, 0.35));
 }
 
 @keyframes resultIn {
@@ -982,16 +1392,19 @@ table.list {
 
 table.list th,
 table.list td {
-  padding: 8px 6px;
+  padding: 7px 6px;
   border-bottom: 1px solid var(--border-soft);
   text-align: left;
 }
 
 table.list th {
   color: var(--faint);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.04em;
+  position: sticky;
+  top: 0;
+  background: var(--panel);
 }
 
 table.list tbody tr {
@@ -1021,4 +1434,19 @@ html[data-motion='reduced'] .float-num {
 @keyframes floatFade {
   0%, 70% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+/* ---------- 桌面端隐藏移动端专属元素 ----------
+   必须放在 .topbar/.iconbar 正式定义之后，否则被同特异性的 display:flex 覆盖 */
+@media (min-width: 900px) {
+  .topbar,
+  .iconbar,
+  .mobile-only {
+    /* !important：scoped 样式带属性选择器（如 .ptabs[data-v]），特异性会压过普通类 */
+    display: none !important;
+  }
+
+  .main-col {
+    padding-left: 0;
+  }
 }

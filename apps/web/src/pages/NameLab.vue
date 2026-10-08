@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { fantasySeed, getMod, JOBS, makeRng, nameSeed, validateName } from '@namearena/core';
-import { api, type ModInfo } from '../api';
 import CharacterPanel from '../components/CharacterPanel.vue';
+import GameIcon from '../components/GameIcon.vue';
+import PageHero from '../components/PageHero.vue';
+import { useMode } from '../mode';
 
 const router = useRouter();
-const mods = ref<ModInfo[]>([]);
-const activeMod = ref('fantasy-pvp');
+const { activeMode } = useMode();
+
 const nameA = ref('张三');
 const nameB = ref('李四');
 const charA = ref<unknown | null>(null);
@@ -18,15 +20,7 @@ const error = ref('');
 const selA = reactive({ gender: '', jobId: '' });
 const selB = reactive({ gender: '', jobId: '' });
 
-onMounted(async () => {
-  try {
-    mods.value = await api.mods();
-  } catch {
-    /* 服务器不在时仍可用本地生成 */
-  }
-});
-
-const mod = computed(() => mods.value.find((m) => m.id === activeMod.value));
+const activeMod = computed(() => activeMode.value?.id ?? 'fantasy-pvp');
 const isFantasy = computed(() => activeMod.value.startsWith('fantasy'));
 
 function optsOf(sel: { gender: string; jobId: string }): Record<string, unknown> | undefined {
@@ -106,81 +100,145 @@ function quickBattle(): void {
 </script>
 
 <template>
-  <div class="panel">
-    <div class="panel-title">🧪 取名实验室</div>
-    <div class="row" style="margin-bottom: 8px">
-      <button
-        v-for="m in mods"
-        :key="m.id"
-        class="btn small"
-        :class="{ primary: m.id === activeMod }"
-        @click="activeMod = m.id"
-      >
-        {{ m.name }}
-      </button>
-    </div>
-    <div class="muted" style="margin-bottom: 8px">
-      名字决定一切：同名永远同角色。英文数字只允许半角，大小写敏感，最长 16 字符。
-    </div>
-    <div class="row">
-      <input v-model="nameA" class="input" style="flex: 2; min-width: 140px" placeholder="名字 A…" maxlength="40" @input="charA = null" />
-      <span class="muted">vs</span>
-      <input v-model="nameB" class="input" style="flex: 2; min-width: 140px" placeholder="名字 B…" maxlength="40" @input="charB = null" />
-      <button class="btn" @click="randomBoth" title="两边同时随机">🎲 随机</button>
-      <button class="btn primary" @click="generate">✨ 生成角色</button>
-      <button class="btn" @click="quickBattle">快斗一场</button>
-    </div>
-    <div v-if="error" class="error-text" style="margin-top: 6px">{{ error }}</div>
-    <template v-if="isFantasy">
-      <div class="row" style="margin-top: 8px; flex-wrap: wrap">
-        <span class="muted" style="min-width: 48px">A 选</span>
-        <select v-model="selA.gender" class="input" style="width: 90px">
-          <option value="">性别随机</option>
-          <option value="male">♂男</option>
-          <option value="female">♀女</option>
-        </select>
-        <select v-model="selA.jobId" class="input" style="width: 120px">
-          <option value="">职业随机</option>
-          <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
-        </select>
-        <span class="muted" style="margin-left: auto">选择参与随机、不偏置属性</span>
-      </div>
-      <div class="row" style="margin-top: 6px; flex-wrap: wrap">
-        <span class="muted" style="min-width: 48px">B 选</span>
-        <select v-model="selB.gender" class="input" style="width: 90px">
-          <option value="">性别随机</option>
-          <option value="male">♂男</option>
-          <option value="female">♀女</option>
-        </select>
-        <select v-model="selB.jobId" class="input" style="width: 120px">
-          <option value="">职业随机</option>
-          <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
-        </select>
-      </div>
-    </template>
-  </div>
+  <PageHero icon="lab" title="1vs1" subtitle="名字决定一切——同名永远同角色；半角英文数字，大小写敏感，最长 16 字符" />
 
-  <div class="lab-grid">
-    <div v-for="(c, idx) in [charA, charB]" :key="idx" class="panel">
-      <CharacterPanel v-if="c" :char="c" :mod-id="activeMod" />
-      <div v-else class="muted empty" style="padding: 50px 0">
-        {{ idx === 0 ? '输入名字，点击「✨ 生成角色」' : '右边也来一个' }}<br />
-        <span style="font-size: 12px">说不定就出了个传奇</span>
+  <!-- 左右对决：A 卡 | 按钮列 | B 卡；生成结果直接长在输入卡下面 -->
+  <div class="duel">
+    <div class="panel danger duel-side">
+      <div class="panel-head">
+        <span class="t"><GameIcon name="user" :size="14" />对阵 A</span>
+      </div>
+      <input v-model="nameA" class="input name-input" placeholder="名字 A…" maxlength="40" @input="charA = null" />
+      <div class="pick-row">
+        <select v-model="selA.gender" class="input">
+          <option value="">性别随机</option>
+          <option value="male">♂ 男</option>
+          <option value="female">♀ 女</option>
+        </select>
+        <select v-model="selA.jobId" class="input">
+          <option value="">职业随机</option>
+          <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
+        </select>
+      </div>
+      <div class="duel-result">
+        <CharacterPanel v-if="charA" :char="charA" :mod-id="activeMod" />
+        <div v-else class="muted empty" style="padding: 30px 0">
+          点击中间「生成角色」<br />
+          <span style="font-size: 12px">说不定就出了个传奇</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="duel-mid">
+      <div class="vs-mark">VS</div>
+      <button class="btn" title="两边同时随机" @click="randomBoth"><GameIcon name="dice" :size="14" />随机</button>
+      <button class="btn primary" @click="generate"><GameIcon name="sparkles" :size="14" />生成角色</button>
+      <button class="btn" @click="quickBattle"><GameIcon name="swords" :size="14" />快斗一场</button>
+      <div v-if="error" class="error-text duel-err">{{ error }}</div>
+    </div>
+
+    <div class="panel info duel-side">
+      <div class="panel-head">
+        <span class="t"><GameIcon name="user" :size="14" />对阵 B</span>
+      </div>
+      <input v-model="nameB" class="input name-input" placeholder="名字 B…" maxlength="40" @input="charB = null" />
+      <div class="pick-row">
+        <select v-model="selB.gender" class="input">
+          <option value="">性别随机</option>
+          <option value="male">♂ 男</option>
+          <option value="female">♀ 女</option>
+        </select>
+        <select v-model="selB.jobId" class="input">
+          <option value="">职业随机</option>
+          <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
+        </select>
+      </div>
+      <div class="duel-result">
+        <CharacterPanel v-if="charB" :char="charB" :mod-id="activeMod" />
+        <div v-else class="muted empty" style="padding: 30px 0">
+          右边也来一个<br />
+          <span style="font-size: 12px">输了不许改名字</span>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.lab-grid {
+.duel {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+  grid-template-columns: 1fr minmax(130px, 160px) 1fr;
+  gap: var(--sp-3);
+  align-items: stretch;
 }
 
-@media (min-width: 720px) {
-  .lab-grid {
-    grid-template-columns: 1fr 1fr;
+.duel-side {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.name-input {
+  margin-bottom: 6px;
+}
+
+.pick-row {
+  display: flex;
+  gap: 6px;
+}
+
+.pick-row .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.duel-result {
+  flex: 1;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.duel-mid {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.vs-mark {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--faint);
+  margin-bottom: 4px;
+}
+
+.duel-err {
+  text-align: center;
+}
+
+/* 窄屏退化为竖排：A、按钮、B 依次向下 */
+@media (max-width: 899px) {
+  .duel {
+    grid-template-columns: 1fr;
+  }
+
+  .duel-mid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .vs-mark {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .duel-mid .btn {
+    flex: 1;
+    min-width: 100px;
   }
 }
 </style>

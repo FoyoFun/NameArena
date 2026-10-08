@@ -4,10 +4,12 @@ import type { ModDisplay, StatMeta } from '@namearena/core';
 import { getVfx } from './vfx';
 import { sequencer } from './sequencer';
 import type { UnitViewState } from './sequencer';
+import GameIcon from '../components/GameIcon.vue';
 
 const props = defineProps<{ unit: UnitViewState; statsMeta: StatMeta[]; display: ModDisplay; index: number }>();
 
-/** 六维行与分档配色：键/标签由模组 display 声明，配色走 theme.css 的 .tier-* 全局类 */
+/** 六维行与分档配色：键/标签由模组 display 声明，配色走 theme.css 的 .tier-* 全局类；
+ *  键名与 icons.ts 同名（str/vit/int/spr/agi/luk），无对应图标时自动隐藏图标 */
 const SIX = computed(() => props.display.sixStats);
 
 const abilitiesOpen = ref(false);
@@ -60,10 +62,10 @@ function vfxEmojiOf(v: { vfx: string; emoji: string }): string {
         <span class="owner" v-if="unit.owner">{{ unit.owner }}</span>
       </div>
 
-      <!-- 六维（模组声明的键与短标签，分档配色，默认显示） -->
+      <!-- 六维（模组声明的键与短标签，图标 + 分档配色） -->
       <div class="six-row">
         <span v-for="s in SIX" :key="s.key" class="six-item" :title="`${s.label} ${unit.base[s.key] ?? '·'} ${tierLabel(s.key)}`">
-          <i class="muted">{{ s.short }}</i>
+          <GameIcon :name="s.key" :size="11" class="six-ico" />
           <b :class="`tier-${unit.tiers[s.key] ?? 'mid'}`">{{ unit.base[s.key] ?? '·' }}</b>
         </span>
       </div>
@@ -77,7 +79,10 @@ function vfxEmojiOf(v: { vfx: string; emoji: string }): string {
               backgroundColor: meta.id === 'hp' ? hpColor(unit) : 'var(--mp)',
             }"
           />
-          <span class="bar-label">{{ meta.label }} {{ Math.round(unit.stats[meta.id] ?? 0) }}/{{ Math.round(unit.stats[meta.barMaxStat ?? 'maxHp'] ?? 0) }}</span>
+          <span class="bar-label">
+            <GameIcon :name="meta.id === 'hp' ? 'heart' : 'mp'" :size="9" />
+            {{ meta.label }} {{ Math.round(unit.stats[meta.id] ?? 0) }}/{{ Math.round(unit.stats[meta.barMaxStat ?? 'maxHp'] ?? 0) }}
+          </span>
         </div>
       </div>
 
@@ -87,16 +92,18 @@ function vfxEmojiOf(v: { vfx: string; emoji: string }): string {
         </span>
       </div>
 
-      <div class="status-row">
-        <span v-for="s in unit.statuses" :key="s.id" class="status-ico" :class="s.kind" :title="s.name">
-          {{ s.kind === 'buff' ? '⬆' : '⬇' }}{{ s.name }}
-        </span>
+      <!-- 状态行 + 技能开关：同一行，开关靠右（主人拍板：不单独占行） -->
+      <div class="status-line">
+        <div class="status-row">
+          <span v-for="s in unit.statuses" :key="s.id" class="status-ico" :class="s.kind" :title="s.name">
+            {{ s.kind === 'buff' ? '⬆' : '⬇' }}{{ s.name }}
+          </span>
+        </div>
+        <button type="button" class="ab-toggle" @click="abilitiesOpen = !abilitiesOpen">
+          {{ abilitiesOpen ? '▾' : '▸' }} 技能 {{ unit.skills.length }}
+        </button>
       </div>
 
-      <!-- 能力：默认折叠，点击展开（能力以卡片展示） -->
-      <div class="ab-toggle" @click="abilitiesOpen = !abilitiesOpen">
-        {{ abilitiesOpen ? '▾' : '▸' }} 技能 {{ unit.skills.length }}
-      </div>
       <div v-if="abilitiesOpen" class="ability-cards" style="grid-template-columns: 1fr">
         <div v-for="a in unit.skills" :key="a.id" class="ability-card mini" :title="a.desc">
           <div class="head">
@@ -129,48 +136,112 @@ function vfxEmojiOf(v: { vfx: string; emoji: string }): string {
 
 .six-item {
   flex: 1;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
   background: var(--bg-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-soft);
   border-radius: 6px;
-  padding: 1px 0;
+  padding: 2px 0;
   line-height: 1.3;
 }
 
-.six-item i {
-  font-style: normal;
-  font-size: 10px;
-  display: block;
+.six-item .six-ico {
+  color: var(--faint);
 }
 
 .six-item b {
   font-size: 13px;
 }
 
-.ab-toggle {
+/* 状态 + 技能开关同行：状态占左侧，开关贴右 */
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-top: 5px;
-  font-size: 12px;
-  color: var(--muted);
+  min-height: 18px;
+}
+
+.status-line .status-row {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+
+.ab-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: transparent;
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--faint);
   cursor: pointer;
   user-select: none;
+  transition: color var(--dur-1) var(--ease-out);
 }
 
 .ab-toggle:hover {
   color: var(--text);
 }
 
-.ab-list {
-  margin-top: 4px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
+/* 移动端精简（主人拍板 #61/#62）：小卡形态——只留 名字/职业、六维、生命、buff；
+   技能与主人名不显示；六维 3x2 网格，血条随卡宽自然变短 */
+@media (max-width: 899px) {
+  .ab-toggle {
+    display: none;
+  }
 
-.ab-item {
-  font-size: 12px;
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 1px 6px;
+  .ability-cards {
+    display: none !important;
+  }
+
+  :deep(.owner) {
+    display: none;
+  }
+
+  :deep(.name-row) {
+    gap: 4px;
+  }
+
+  :deep(.name) {
+    font-size: 12.5px;
+  }
+
+  :deep(.pfill) {
+    font-size: 10px;
+  }
+
+  .six-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
+  }
+
+  .six-item {
+    padding: 1px 0;
+  }
+
+  .six-item b {
+    font-size: 12px;
+  }
+
+  :deep(.bar) {
+    margin-top: 4px;
+  }
+
+  :deep(.status-row) {
+    margin-top: 4px;
+    min-height: 0;
+  }
+
+  :deep(.status-ico) {
+    font-size: 10px;
+    padding: 0 4px;
+  }
 }
 </style>

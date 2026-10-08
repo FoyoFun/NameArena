@@ -17,6 +17,8 @@ export interface UnitViewState {
   tags: string[];
   personalityName?: string;
   personalityDesc?: string;
+  /** 召唤物（fantasy）：不出现在主卡区，进各阵营底部的召唤物条（决策 #59） */
+  pet?: boolean;
   stats: Record<string, number>;
   base: Record<string, number>;
   tiers: Record<string, string>;
@@ -197,6 +199,24 @@ export class Sequencer {
         this.state.cap = (ev.payload['cap'] as number | undefined) ?? null;
         this.state.actions = 0;
         this.addVfx('stage', 'stage');
+        break;
+      }
+      case 'log': {
+        // 引擎的杂项日志事件（payload.type 区分）：summon 携带召唤物快照，
+        // 加入渲染状态后它的伤害/治疗/战报都能按阵营归边，名字徽章也能查出真名（决策 #59）
+        if (ev.payload['type'] === 'summon') {
+          const u = ev.payload['unit'] as Partial<UnitViewState> | undefined;
+          if (u && u.uid && !this.unit(u.uid)) {
+            this.state.units.push({
+              tags: [],
+              skills: [],
+              statuses: [],
+              down: false,
+              ...u,
+            } as UnitViewState);
+            this.addVfx('buff', `unit:${u.uid}`);
+          }
+        }
         break;
       }
       case 'roundStart': {

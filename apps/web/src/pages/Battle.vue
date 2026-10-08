@@ -8,13 +8,14 @@ import { setLastBattlePath } from '../battleNav';
 import { sequencer } from '../battle-stage/sequencer';
 import BattleStage from '../battle-stage/BattleStage.vue';
 import BattleLog from '../battle-stage/BattleLog.vue';
+import GameIcon from '../components/GameIcon.vue';
+import PageHero from '../components/PageHero.vue';
 
 const route = useRoute();
 const error = ref('');
 const loading = ref(true);
 const modId = ref('fantasy-pvp');
 const speed = ref(1);
-const copied = ref(false);
 
 const mod = computed(() => {
   try {
@@ -164,24 +165,109 @@ const resultText = computed(() => {
   <div v-if="error" class="panel error-text">{{ error }}</div>
   <div v-else-if="loading" class="muted empty">加载战报…</div>
   <template v-else-if="mod">
-    <div class="panel" style="display: flex; gap: 8px; align-items: center; justify-content: space-between">
-      <div class="row">
-        <button class="btn small" @click="replay">🔄 重播</button>
-        <button class="btn small" @click="toggleSpeed">{{ speed }}x</button>
-        <button class="btn small" @click="skip">⏭ 跳过</button>
-        <span v-if="sequencer.state.cap" class="tag" title="当前已用行动数 / 最大行动数">⚔️ 行动 {{ sequencer.state.actions }}/{{ sequencer.state.cap }}</span>
+    <!-- 战斗页一屏布局（决策 #59）：上方舞台区吃剩余高度（两阵营各自内滚），
+         战报无论如何保底 40%——展开技能也不会把战报挤没 -->
+    <div class="battle-wrap">
+      <PageHero icon="swords" title="战斗">
+        <button class="btn small icon-btn" title="从头重播" @click="replay"><GameIcon name="play" :size="13" /></button>
+        <button class="btn small" title="播放速度" @click="toggleSpeed"><GameIcon name="speed" :size="13" />{{ speed }}x</button>
+        <button class="btn small icon-btn" title="瞬间补完" @click="skip"><GameIcon name="skip" :size="13" /></button>
+        <span v-if="sequencer.state.cap" class="tag gold" title="当前已用行动数 / 最大行动数">
+          <GameIcon name="clock" :size="11" />{{ sequencer.state.actions }}/{{ sequencer.state.cap }}
+        </span>
+      </PageHero>
+
+      <div v-if="sequencer.state.finished && sequencer.state.result" class="panel result-banner">
+        {{ resultText }}
       </div>
-      <button class="btn small primary" @click="copyReport">{{ copied ? '✓ 已复制' : '📋 复制战报' }}</button>
-    </div>
 
-    <div v-if="sequencer.state.finished && sequencer.state.result" class="panel result-banner">
-      {{ resultText }}
-    </div>
+      <div class="battle-top">
+        <BattleStage :stats-meta="mod.stats" :display="mod.display" />
+      </div>
 
-    <BattleStage :stats-meta="mod.stats" :display="mod.display" />
-
-    <div class="panel" style="margin-top: 12px">
-      <BattleLog />
+      <div class="log-panel">
+        <BattleLog class="log-fill" />
+      </div>
     </div>
   </template>
 </template>
+
+<style scoped>
+.log-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.log-fill {
+  flex: 1;
+}
+
+/* icon-only 按钮：正方形 */
+.icon-btn {
+  width: 30px;
+  padding: 0;
+  justify-content: center;
+}
+
+/* 移动端（决策 #61）：同样一屏定高——战报固定底部 40%，舞台 60% 内滚 */
+@media (max-width: 899px) {
+  .battle-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: calc(100dvh - var(--nav-h) - 20px);
+  }
+
+  .battle-top {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .log-panel {
+    flex: 0 0 40%;
+    min-height: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 4px;
+  }
+
+  .log-fill {
+    max-height: none;
+  }
+}
+
+/* 桌面：一屏放下所有信息。舞台区吃剩余高度（两阵营各自内滚），
+   战报保底 40% 不被挤压（决策 #59） */
+@media (min-width: 900px) {
+  .battle-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: calc(100vh - 28px - 40px); /* .page 的上下 padding */
+  }
+
+  .battle-top {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .log-panel {
+    flex: 0 0 40%;
+    min-height: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 4px;
+  }
+
+  .log-fill {
+    max-height: none;
+  }
+}
+</style>

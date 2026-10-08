@@ -127,6 +127,7 @@ export function summonPet(ctx: BattleContext, summoner: UnitRuntime, petId: stri
   unit.meta['lastHarmTick'] = 0;
   unit.meta['pet'] = true;
   unit.meta['summonerUid'] = summoner.uid;
+  unit.meta['owner'] = summoner.name; // 表现层显示「谁的召唤物」
   unit.meta['hooks'] = aggregateCharHooks(char as unknown as Character);
   ctx.state.units.push(unit);
   ctx.emit('log', { uid, type: 'summon', unit: unitSnapshot(unit) }, [

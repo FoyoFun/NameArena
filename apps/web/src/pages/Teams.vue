@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { computed, onActivated, onMounted, ref } from 'vue';
-import { api, type ModInfo, type TeamInfo } from '../api';
+import { computed, onActivated, onMounted, ref, watch } from 'vue';
+import { api, type TeamInfo } from '../api';
 import { fantasySeed, getMod, JOBS, makeRng, nameSeed, validateName } from '@namearena/core';
 import CharacterPanel from '../components/CharacterPanel.vue';
+import GameIcon from '../components/GameIcon.vue';
+import PageHero from '../components/PageHero.vue';
+import PageTabs from '../components/PageTabs.vue';
+import { useMode } from '../mode';
 
-const mods = ref<ModInfo[]>([]);
-const activeMod = ref<string>('');
+const { activeMode } = useMode();
+const activeMod = computed(() => activeMode.value?.id ?? '');
+
 const teams = ref<TeamInfo[]>([]);
 const members = ref<string[]>([]);
 /** 每行的生成选项（fantasy 用；'' = 随机） */
@@ -13,36 +18,45 @@ const memberGenders = ref<string[]>([]);
 const memberJobs = ref<string[]>([]);
 const error = ref('');
 const busy = ref(false);
+/** 当前展开详情的队伍 id（'' = 无） */
 const expanded = ref<string>('');
+/** 移动端二级页签：创建队伍 / 队伍列表（桌面双块同显，页签隐藏） */
+const mobileTab = ref<'create' | 'list'>('create');
 
-const mod = computed(() => mods.value.find((m) => m.id === activeMod.value));
 const isFantasy = computed(() => activeMod.value.startsWith('fantasy'));
+/** 生成域上限：卡片数量随模组（PVP 5 人 / PVE 8 人由 mods 下发） */
+const maxUnits = computed(() => members.value.length);
 
 onMounted(async () => {
-  mods.value = await api.mods();
-  activeMod.value = mods.value[0]?.id ?? '';
-  members.value = Array.from({ length: mods.value[0]?.maxUnits ?? 3 }, () => '');
-  memberGenders.value = Array.from({ length: mods.value[0]?.maxUnits ?? 3 }, () => '');
-  memberJobs.value = Array.from({ length: mods.value[0]?.maxUnits ?? 3 }, () => '');
+  await resetForMode();
   await refresh();
 });
 
 // keep-alive：切页回来刷新列表数据，但保留输入框等界面状态
 onActivated(async () => {
-  if (mods.value.length) await refresh();
+  if (activeMod.value) await refresh();
 });
+
+// 模式切换（侧栏）→ 换生成域重建表单并刷新
+watch(activeMod, async (id, old) => {
+  if (id && id !== old) {
+    await resetForMode();
+    await refresh();
+  }
+});
+
+async function resetForMode() {
+  if (!activeMod.value) return;
+  const mods = await api.mods().catch(() => []);
+  const max = mods.find((m) => m.id === activeMod.value)?.maxUnits ?? 5;
+  members.value = Array.from({ length: max }, () => '');
+  memberGenders.value = Array.from({ length: max }, () => '');
+  memberJobs.value = Array.from({ length: max }, () => '');
+  expanded.value = '';
+}
 
 async function refresh() {
   teams.value = await api.myTeams();
-}
-
-function switchMod(id: string) {
-  activeMod.value = id;
-  const m = mods.value.find((x) => x.id === id);
-  members.value = Array.from({ length: m?.maxUnits ?? 3 }, (_, i) => members.value[i] ?? '');
-  memberGenders.value = Array.from({ length: m?.maxUnits ?? 3 }, () => '');
-  memberJobs.value = Array.from({ length: m?.maxUnits ?? 3 }, () => '');
-  expanded.value = '';
 }
 
 const validMembers = computed(() =>
@@ -71,7 +85,7 @@ function previewChar(modId: string, name: string, opts: Record<string, unknown> 
 
 function createError(): string {
   if (filled.value.length === 0) return '至少填 1 名队员';
-  if (filled.value.length > (mod.value?.maxUnits ?? 3)) return `最多 ${mod.value?.maxUnits} 人`;
+  if (filled.value.length > maxUnits.value) return `最多 ${maxUnits.value} 人`;
   for (const v of validMembers.value) {
     if (v && !v.ok) return v.reason;
   }
@@ -118,77 +132,230 @@ function toggleExpand(id: string) {
   expanded.value = expanded.value === id ? '' : id;
 }
 
+/** 列表按当前模式的生成域过滤 */
 const myModTeams = computed(() => teams.value.filter((x) => x.modId === activeMod.value));
 </script>
 
 <template>
-  <div class="panel">
-    <div class="panel-title">🛡️ 我的队伍</div>
-    <div class="row" style="margin-bottom: 10px">
-      <button
-        v-for="m in mods"
-        :key="m.id"
-        class="btn small"
-        :class="{ primary: m.id === activeMod }"
-        @click="switchMod(m.id)"
-      >
-        {{ m.name }}
-      </button>
+  <PageHero
+    icon="team"
+    title="我的队伍"
+    :subtitle="`填 1~${maxUnits || '…'} 名队员；打过一场后自动进入数据池`"
+  />
+
+  <PageTabs
+    v-model="mobileTab"
+    class="mobile-only"
+    :tabs="[
+      { key: 'create', label: '创建队伍', icon: 'sparkles' },
+      { key: 'list', label: '队伍列表', icon: 'team' },
+    ]"
+  />
+
+  <!-- 上：创建队伍（横向成员卡带） -->
+  <div class="panel gold" :class="{ 'mobile-hide': mobileTab !== 'create' }">
+    <div class="panel-head">
+      <span class="t"><GameIcon name="sparkles" :size="14" />创建队伍</span>
+      <span class="acts">
+        <span class="tag">{{ filled.length }}/{{ maxUnits }} 人</span>
+        <button class="btn small primary" :disabled="busy" @click="create">
+          <GameIcon name="check" :size="12" />创建队伍
+        </button>
+      </span>
     </div>
 
-    <div class="muted" style="margin-bottom: 6px">
-      填 1~{{ mod?.maxUnits }} 名队员（允许重名、允许多打少）。队伍打过一场后会进入数据池。
-    </div>
-    <div v-for="(m, i) in members" :key="i" style="margin-bottom: 6px">
-      <div class="row">
-        <input v-model="members[i]" class="input" style="flex: 1" :placeholder="`队员 ${i + 1}（可留空）`" maxlength="40" />
-        <span v-if="m.trim() && !validateName(m).ok" class="error-text" style="white-space: nowrap">名字不合法</span>
-      </div>
-      <div v-if="isFantasy && m.trim()" class="row" style="margin-top: 4px">
-        <select v-model="memberGenders[i]" class="input" style="width: 96px">
-          <option value="">性别随机</option>
-          <option value="male">♂男</option>
-          <option value="female">♀女</option>
-        </select>
-        <select v-model="memberJobs[i]" class="input" style="width: 120px">
-          <option value="">职业随机</option>
-          <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
-        </select>
-        <span class="muted" style="font-size: 12px">选择参与随机、不偏置属性</span>
+    <div class="hstrip">
+      <div v-for="(m, i) in members" :key="i" class="member-card">
+        <div class="member-idx">队员 {{ i + 1 }}</div>
+        <input v-model="members[i]" class="input" :placeholder="`名字（可留空）`" maxlength="40" />
+        <span v-if="m.trim() && !validateName(m).ok" class="error-text">名字不合法</span>
+        <template v-if="isFantasy">
+          <select v-model="memberGenders[i]" class="input">
+            <option value="">性别随机</option>
+            <option value="male">♂ 男</option>
+            <option value="female">♀ 女</option>
+          </select>
+          <select v-model="memberJobs[i]" class="input">
+            <option value="">职业随机</option>
+            <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
+          </select>
+        </template>
       </div>
     </div>
-    <div v-if="error" class="error-text" style="margin: 6px 0">{{ error }}</div>
-    <button class="btn primary" :disabled="busy" @click="create">创建队伍</button>
+    <div v-if="error" class="error-text" style="margin-top: 6px">{{ error }}</div>
   </div>
 
-  <div v-for="t in myModTeams" :key="t.id" class="panel" style="cursor: pointer" @click="toggleExpand(t.id)">
-    <div class="row" style="justify-content: space-between">
-      <div>
-        <b>{{ t.members.join(' · ') }}</b>
-        <span class="tag" style="margin-left: 6px">{{ t.wins }}胜 {{ t.losses }}负</span>
-        <span v-if="t.inPool" class="tag">已入池</span>
+  <!-- 下：队伍列表（横向卡片带 + 选中详情） -->
+  <div class="panel team-panel" :class="{ 'mobile-hide': mobileTab !== 'list' }">
+    <div class="panel-head">
+      <span class="t"><GameIcon name="team" :size="14" />队伍列表</span>
+      <span class="acts">
+        <span class="tag">{{ myModTeams.length }} 支</span>
+        <span class="muted" style="font-size: 12px">点击卡片展开成员详情</span>
+      </span>
+    </div>
+
+    <div class="hstrip">
+      <div
+        v-for="t in myModTeams"
+        :key="t.id"
+        class="team-card"
+        :class="{ open: expanded === t.id }"
+        @click="toggleExpand(t.id)"
+      >
+        <div class="team-card-names">
+          <b v-for="n in t.members" :key="n" class="team-name-chip">{{ n }}</b>
+        </div>
+        <div class="team-card-meta">
+          <span class="tag" :class="t.wins + t.losses > 0 ? (t.wins >= t.losses ? 'ok' : 'bad') : ''">
+            {{ t.wins }}胜 {{ t.losses }}负
+          </span>
+          <span v-if="t.inPool" class="tag">已入池</span>
+        </div>
+        <div class="team-card-acts">
+          <button class="btn small" @click.stop="toggleExpand(t.id)">
+            {{ expanded === t.id ? '收起' : '详情' }}
+          </button>
+          <button class="btn small danger" @click.stop="remove(t.id)"><GameIcon name="cross" :size="12" />解散</button>
+        </div>
       </div>
-      <div class="row">
-        <button class="btn small" @click.stop="toggleExpand(t.id)">{{ expanded === t.id ? '收起 ▾' : '详情 ▸' }}</button>
-        <button class="btn small danger" @click.stop="remove(t.id)">解散</button>
+      <div v-if="myModTeams.length === 0" class="muted empty strip-empty">
+        这个模式还没有队伍——在上面填几个名字，点「创建队伍」
       </div>
     </div>
 
-    <div v-if="expanded === t.id" style="margin-top: 10px; display: grid; gap: 10px" @click.stop>
+    <!-- 选中详情：成员横排，区内垂直滚动 -->
+    <div v-if="expanded" class="team-detail">
       <div
-        v-for="(name, i) in t.members"
+        v-for="(name, i) in myModTeams.find((t) => t.id === expanded)?.members ?? []"
         :key="name"
-        style="background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px"
+        class="detail-member"
       >
         <CharacterPanel
           v-if="validateName(name).ok"
-          :char="previewChar(t.modId, name, t.memberOpts?.[i] ?? null)"
-          :mod-id="t.modId"
+          :char="previewChar(myModTeams.find((t) => t.id === expanded)!.modId, name, myModTeams.find((t) => t.id === expanded)!.memberOpts?.[i] ?? null)"
+          :mod-id="myModTeams.find((t) => t.id === expanded)!.modId"
         />
       </div>
     </div>
   </div>
-  <div v-if="myModTeams.length === 0" class="muted empty">
-    这个模组下还没有队伍，先建一支吧
-  </div>
 </template>
+
+<style scoped>
+/* 移动端二级页签切换：非当前块隐藏（!important 防 display:flex 覆盖）；
+   桌面（≥900px）无此规则，双块自然同显 */
+@media (max-width: 899px) {
+  .mobile-hide {
+    display: none !important;
+  }
+}
+
+/* 横排卡片带：超出可水平滚动（主人裁定：优先垂直，但以排版美观为主，横向带子允许横滚） */
+.hstrip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+}
+
+.member-card {
+  flex: 0 0 148px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+
+.member-idx {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--faint);
+  letter-spacing: 0.06em;
+}
+
+.team-panel {
+  min-width: 0;
+}
+
+.team-card {
+  flex: 0 0 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-out);
+}
+
+.team-card:hover {
+  border-color: var(--border-strong);
+}
+
+.team-card.open {
+  border-color: rgba(243, 183, 96, 0.4);
+}
+
+.team-card-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.team-name-chip {
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  padding: 0 5px;
+  line-height: 1.6;
+}
+
+.team-card-meta {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.team-card-acts {
+  display: flex;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.team-card-acts .btn {
+  flex: 1;
+}
+
+.strip-empty {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* 详情区：成员横排 + 垂直滚动 */
+.team-detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(250px, 1fr);
+  gap: 8px;
+  max-height: 62vh;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.detail-member {
+  background: var(--bg-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+</style>
