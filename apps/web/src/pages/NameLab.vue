@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { fantasySeed, getMod, JOBS, makeRng, nameSeed, validateName } from '@namearena/core';
+import { fantasySeed, getMod, makeRng, nameSeed, validateName } from '@namearena/core';
 import CharacterPanel from '../components/CharacterPanel.vue';
 import GameIcon from '../components/GameIcon.vue';
 import PageHero from '../components/PageHero.vue';
@@ -16,23 +16,20 @@ const charA = ref<unknown | null>(null);
 const charB = ref<unknown | null>(null);
 const error = ref('');
 
-/** 性别/职业选择（主人裁定 F42：可选、参与种子、无属性偏置；'' = 随机） */
-const selA = reactive({ gender: '', jobId: '' });
-const selB = reactive({ gender: '', jobId: '' });
+/** 性别选择（'' = 随机）。F52：职业改为种子随机，不再可选 */
+const selA = reactive({ gender: '' });
+const selB = reactive({ gender: '' });
 
 const activeMod = computed(() => activeMode.value?.id ?? 'fantasy-pvp');
 const isFantasy = computed(() => activeMod.value.startsWith('fantasy'));
 
-function optsOf(sel: { gender: string; jobId: string }): Record<string, unknown> | undefined {
-  const opts: Record<string, unknown> = {};
-  if (sel.gender) opts['gender'] = sel.gender;
-  if (sel.jobId) opts['jobId'] = sel.jobId;
-  return Object.keys(opts).length ? opts : undefined;
+function optsOf(sel: { gender: string }): Record<string, unknown> | undefined {
+  return sel.gender ? { gender: sel.gender } : undefined;
 }
 
 /** 按当前模组生成角色（同名同选同域同版本必同角色）。
  *  生成器走 core 的 getMod——客户端与服务器同一份模组代码。 */
-function generateFor(name: string, sel: { gender: string; jobId: string }): unknown {
+function generateFor(name: string, sel: { gender: string }): unknown {
   const m = getMod(activeMod.value);
   const opts = optsOf(sel);
   // fantasy 的选择参与种子（fantasySeed）；其他模组无选项概念
@@ -91,9 +88,7 @@ function quickBattle(): void {
   const query: Record<string, string> = { a: a.name, b: b.name, modId: activeMod.value, t: String(Date.now()) };
   if (isFantasy.value) {
     if (selA.gender) query['ga'] = selA.gender;
-    if (selA.jobId) query['ja'] = selA.jobId;
     if (selB.gender) query['gb'] = selB.gender;
-    if (selB.jobId) query['jb'] = selB.jobId;
   }
   router.push({ path: '/battle/local', query });
 }
@@ -109,17 +104,11 @@ function quickBattle(): void {
         <span class="t"><GameIcon name="user" :size="14" />对阵 A</span>
       </div>
       <input v-model="nameA" class="input name-input" placeholder="名字 A…" maxlength="40" @input="charA = null" />
-      <div class="pick-row">
-        <select v-model="selA.gender" class="input">
-          <option value="">性别随机</option>
-          <option value="male">♂ 男</option>
-          <option value="female">♀ 女</option>
-        </select>
-        <select v-model="selA.jobId" class="input">
-          <option value="">职业随机</option>
-          <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
-        </select>
-      </div>
+      <select v-model="selA.gender" class="input">
+        <option value="">性别随机</option>
+        <option value="male">♂ 男</option>
+        <option value="female">♀ 女</option>
+      </select>
       <div class="duel-result">
         <CharacterPanel v-if="charA" :char="charA" :mod-id="activeMod" />
         <div v-else class="muted empty" style="padding: 30px 0">
@@ -142,17 +131,11 @@ function quickBattle(): void {
         <span class="t"><GameIcon name="user" :size="14" />对阵 B</span>
       </div>
       <input v-model="nameB" class="input name-input" placeholder="名字 B…" maxlength="40" @input="charB = null" />
-      <div class="pick-row">
-        <select v-model="selB.gender" class="input">
-          <option value="">性别随机</option>
-          <option value="male">♂ 男</option>
-          <option value="female">♀ 女</option>
-        </select>
-        <select v-model="selB.jobId" class="input">
-          <option value="">职业随机</option>
-          <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
-        </select>
-      </div>
+      <select v-model="selB.gender" class="input">
+        <option value="">性别随机</option>
+        <option value="male">♂ 男</option>
+        <option value="female">♀ 女</option>
+      </select>
       <div class="duel-result">
         <CharacterPanel v-if="charB" :char="charB" :mod-id="activeMod" />
         <div v-else class="muted empty" style="padding: 30px 0">

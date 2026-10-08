@@ -8,13 +8,13 @@ export default defineSkill({
   label: 'phys',
   cost: 4,
   weight: 0,
-  desc: '淬毒突袭，造成 0.9 倍伤害，40% 概率使敌人中毒或流血。',
+  desc: '淬毒突袭，造成 1.05 倍伤害，30% 概率使敌人中毒或流血（配合弱点洞悉叠异常增伤）。',
   vfx: 'slash',
   active: {
     target: 'enemy',
     effects: [
-      { type: 'damage', scale: 0.9 },
-      { type: 'status', status: 'poison', pool: ['poison', 'bleed'], chance: 0.4, powerScaleAtk: 0.1 },
+      { type: 'damage', scale: 1.05 },
+      { type: 'status', status: 'poison', pool: ['poison', 'bleed'], chance: 0.3, ailmentScale: 0.9, powerScaleAtk: 0.1 },
     ],
   },
 });

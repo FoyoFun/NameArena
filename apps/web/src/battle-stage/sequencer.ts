@@ -24,7 +24,7 @@ export interface UnitViewState {
   tiers: Record<string, string>;
   skills: { id: string; name: string; desc: string; kind: string; source?: string; cost: number }[];
   totalCost: number;
-  statuses: { id: string; name: string; kind: string; remain: number }[];
+  statuses: { id: string; name: string; kind: string; remain: number; count: number }[];
   down: boolean;
 }
 
@@ -268,12 +268,18 @@ export class Sequencer {
         const uid = ev.payload['uid'] as string;
         const statusId = ev.payload['status'] as string;
         const u = this.unit(uid);
-        if (u && !u.statuses.some((s) => s.id === statusId)) {
-          // 状态名/增减益：事件自描述（kind）优先，模组 display 兜底
-          const brief = this.display?.statusBrief(statusId);
-          const kind = (ev.payload['kind'] as string) ?? brief?.kind ?? 'buff';
-          u.statuses.push({ id: statusId, name: brief?.name ?? statusId, kind, remain: 0 });
-          this.addVfx(kind === 'buff' ? 'buff' : 'debuff', `unit:${uid}`);
+        if (u) {
+          // 同 id 多实例聚合计数（引擎独立结算每个实例；主人要求显示 [流血x3] 式层数）
+          const existing = u.statuses.find((s) => s.id === statusId);
+          if (existing) {
+            existing.count += 1;
+          } else {
+            // 状态名/增减益：事件自描述（kind）优先，模组 display 兜底
+            const brief = this.display?.statusBrief(statusId);
+            const kind = (ev.payload['kind'] as string) ?? brief?.kind ?? 'buff';
+            u.statuses.push({ id: statusId, name: brief?.name ?? statusId, kind, remain: 0, count: 1 });
+          }
+          this.addVfx((ev.payload['kind'] as string) === 'buff' ? 'buff' : 'debuff', `unit:${uid}`);
         }
         break;
       }
@@ -281,7 +287,13 @@ export class Sequencer {
         const uid = ev.payload['uid'] as string;
         const statusId = ev.payload['status'] as string;
         const u = this.unit(uid);
-        if (u) u.statuses = u.statuses.filter((s) => s.id !== statusId);
+        if (u) {
+          const existing = u.statuses.find((s) => s.id === statusId);
+          if (existing) {
+            existing.count -= 1;
+            if (existing.count <= 0) u.statuses = u.statuses.filter((s) => s.id !== statusId);
+          }
+        }
         break;
       }
       case 'statChange': {

@@ -7,10 +7,10 @@ export default defineSkill({
   kind: 'active',
   cost: 4,
   weight: 1,
-  desc: '为一名受伤的友方恢复 0.7 倍攻击的生命。',
+  desc: '为一名受伤的友方恢复 1.0 倍攻击的生命。',
   vfx: 'heal',
   active: {
     target: 'allyInjured',
-    effects: [{ type: 'heal', scale: 0.7 }],
+    effects: [{ type: 'heal', scale: 1.0 }],
   },
 });

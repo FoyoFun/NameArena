@@ -93,7 +93,7 @@ export function executeSkill(ctx: BattleContext, unit: UnitRuntime, skill: Skill
             attackOnce(ctx, unit, target, scale, { source: skill.name, viaCast: castTicks > 0, drainRatio: act.drainRatio });
             segments += 1;
             if (!unit.alive || !target.alive) break;
-            if (i < eff.chase.max - 1 && !ctx.rng.chance(favor(ctx, unit, eff.chase.p))) break;
+            if (i < eff.chase.max - 1 && !ctx.rng.chance(favor(ctx, unit, eff.chase.p, 0, 1, eff.chase.ptScale ?? 1))) break;
           }
           if (segments > 1) {
             ctx.emit('log', { uid: unit.uid, type: 'combo', count: segments }, [
@@ -106,7 +106,8 @@ export function executeSkill(ctx: BattleContext, unit: UnitRuntime, skill: Skill
         break;
       }
       case 'heal': {
-        const target = act.target === 'self' ? unit : pickInjuredAlly(ctx, unit);
+        if (eff.chance !== undefined && !ctx.rng.chance(favor(ctx, unit, eff.chance, 0, 1))) break;
+        const target = eff.to === 'self' || act.target === 'self' ? unit : pickInjuredAlly(ctx, unit);
         if (!target) return;
         const v = FORMULAS.varianceMin + ctx.rng.next() * (FORMULAS.varianceMax - FORMULAS.varianceMin);
         const healed = healUnit(ctx, target, effStat(unit, 'atk') * eff.scale * v, skill.name);
@@ -122,7 +123,25 @@ export function executeSkill(ctx: BattleContext, unit: UnitRuntime, skill: Skill
         break;
       }
       case 'summon': {
-        summonPet(ctx, unit, eff.pet);
+        // F51：每场对局每个召唤技只召唤一次（主人裁定）；召唤过 → 技能退化为一次伤害打击
+        const flag = `summonUsed:${skill.id}`;
+        if (unit.meta[flag] === true) {
+          const fb = act.summonFallback;
+          if (fb) {
+            const target = isPet(unit) ? pickEnemyTargetForPet(ctx, unit) : pickEnemyTarget(ctx, unit);
+            if (!target) return;
+            ctx.emit('log', { uid: unit.uid, type: 'summonFallback' }, [
+              { target: `unit:${unit.uid}`, durationMs: 350, logText: `👊 @${unit.uid}@ 本场已召唤过了，改为亲自出击！` },
+            ]);
+            attackOnce(ctx, unit, target, fb.scale, { source: skill.name, viaCast: castTicks > 0, drainRatio: act.drainRatio });
+          } else {
+            summonPet(ctx, unit, eff.pet);
+          }
+          break;
+        }
+        if (summonPet(ctx, unit, eff.pet)) {
+          unit.meta[flag] = true;
+        }
         break;
       }
     }

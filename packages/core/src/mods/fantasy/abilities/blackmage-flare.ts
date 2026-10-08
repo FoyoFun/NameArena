@@ -8,16 +8,16 @@ export default defineSkill({
   label: 'magic',
   cost: 5,
   weight: 0,
-  desc: '咏唱后引爆究极火焰：吟唱 500+随机 500；伤害 0.9 倍起，实际吟唱越久伤害越高（最多 +0.6 倍）；30% 概率灼烧或冰冻。',
+  desc: '咏唱后引爆究极火焰：吟唱 400+随机 400；伤害 0.9 倍起，实际吟唱越久伤害越高（最多 +1.2 倍）；18% 概率灼烧或冰冻。',
   vfx: 'fireball',
   active: {
     target: 'enemy',
-    cast: { base: 500, rollMax: 500 },
+    cast: { base: 400, rollMax: 400 },
     castDivisor: 600,
-    castScale: 0.6,
+    castScale: 1.2,
     effects: [
       { type: 'damage', scale: 0.9 },
-      { type: 'status', status: 'burn', pool: ['burn', 'freeze'], chance: 0.3, ailmentScale: 0.7, powerScaleAtk: 0.15 },
+      { type: 'status', status: 'burn', pool: ['burn', 'freeze'], chance: 0.18, ailmentScale: 0.7, powerScaleAtk: 0.15 },
     ],
   },
 });

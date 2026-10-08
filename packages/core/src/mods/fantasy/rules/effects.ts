@@ -47,7 +47,8 @@ export interface ApplyStatusOpts {
   fixedTurns?: number;
 }
 
-/** 施加状态：同 id 多实例并存（不同来源独立结算）。控制类挂到吟唱中单位会立即打断吟唱（F4）。 */
+/** 施加状态：同 id 多实例并存（不同来源独立结算）。F50：控制不再打断吟唱——
+ *  吟唱中单位被挂控制时状态先攒着，等它下次自己的回合（阶段3）才结算跳过。 */
 export function applyStatusInstance(ctx: BattleContext, target: UnitRuntime, statusId: string, opts: ApplyStatusOpts = {}): boolean {
   const def = STATUS_MAP.get(statusId);
   if (!def || !target.alive) return false;
@@ -70,15 +71,6 @@ export function applyStatusInstance(ctx: BattleContext, target: UnitRuntime, sta
       logText: `@${target.uid}@ 获得【${colored}】`,
     },
   ]);
-
-  // 控制类打断吟唱：技能作废、ATB 归 0（Q4-3 裁定）
-  if (def.control && target.meta['casting']) {
-    target.meta['casting'] = null;
-    target.meta['atb'] = 0;
-    ctx.emit('log', { uid: target.uid, type: 'interrupt' }, [
-      { target: `unit:${target.uid}`, vfx: 'stun', durationMs: 700, logText: `💥 @${target.uid}@ 的咏唱被【~${def.name}~】打断了！` },
-    ]);
-  }
   return true;
 }
 

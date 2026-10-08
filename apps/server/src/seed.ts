@@ -11,12 +11,12 @@ import { players, teams } from './db/schema';
 const SYSTEM_TOKEN = 'system';
 
 const SAMPLE_TEAMS: Array<{ modId: string; members: Array<string | { name: string; opts?: Record<string, unknown> }> }> = [
-  // 幻想大乱斗示范队（F47：常规模式已退场；选择参与种子、无属性偏置）
-  { modId: 'fantasy-pvp', members: [{ name: '圣女贞德', opts: { gender: 'female', jobId: 'whitemage' } }, { name: '玛尔达', opts: { gender: 'female', jobId: 'knight' } }, { name: '埃克莱尔', opts: { jobId: 'apothecary' } }] },
-  { modId: 'fantasy-pvp', members: [{ name: '无名剑客', opts: { jobId: 'swordsman' } }, { name: '影蟒', opts: { gender: 'male', jobId: 'assassin' } }, { name: '轰天拳王', opts: { jobId: 'grappler' } }] },
-  { modId: 'fantasy-pvp', members: [{ name: '莉拉', opts: { gender: 'female', jobId: 'dancer' } }, { name: '缪斯', opts: { gender: 'female', jobId: 'bard' } }, { name: '贝希摩斯', opts: { jobId: 'hunter' } }] },
-  { modId: 'fantasy-pvp', members: [{ name: '虚空贤者', opts: { jobId: 'blackmage' } }] },
-  { modId: 'fantasy-pvp', members: [{ name: '铁壁骑士团', opts: { jobId: 'knight' } }, { name: '狂战之魂', opts: { jobId: 'warrior' } }] },
+  // 幻想大乱斗示范队（F52：职业不可选、由种子随机；只有性别可选、参与种子、无属性偏置）
+  { modId: 'fantasy-pvp', members: [{ name: '圣女贞德', opts: { gender: 'female' } }, { name: '玛尔达', opts: { gender: 'female' } }, '埃克莱尔'] },
+  { modId: 'fantasy-pvp', members: [{ name: '无名剑客' }, { name: '影蟒', opts: { gender: 'male' } }, { name: '轰天拳王' }] },
+  { modId: 'fantasy-pvp', members: [{ name: '莉拉', opts: { gender: 'female' } }, { name: '缪斯', opts: { gender: 'female' } }, { name: '贝希摩斯' }] },
+  { modId: 'fantasy-pvp', members: ['虚空贤者'] },
+  { modId: 'fantasy-pvp', members: ['铁壁骑士团', '狂战之魂'] },
 ];
 
 function main() {

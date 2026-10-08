@@ -4,10 +4,10 @@
  */
 export const FORMULAS = {
   // ---------- 连续映射（§3.2） ----------
-  /** 高端次线性放大：wHigh 超过 1 后按 √(x−90) × 系数增长 */
-  wHighSqrtCoef: 0.1,
-  /** 低端深渊放大：x<10 后每点 × 系数 */
-  wLowAbyssCoef: 0.03,
+  /** 高端次线性放大：wHigh 超过 1 后按 √(x−90) × 系数增长（F49 调大：逆天档数值更夸张，节目效果） */
+  wHighSqrtCoef: 0.16,
+  /** 低端深渊放大：x<10 后每点 × 系数（F53 调大：深渊层兜底"没有废角色"） */
+  wLowAbyssCoef: 0.08,
 
   // ---------- 天选（§4.2） ----------
   /** 天选加成 pt = destinyAmp × 天选/(天选+destinyB) */
@@ -26,15 +26,15 @@ export const FORMULAS = {
   ailmentBreakCoef: 1.5,
 
   // ---------- 命中（§4.2） ----------
-  /** 命中概率 = clamp(hitBase + 攻hit − 守dodge + 攻天选pt − 守天选pt, hitFloor, hitCap)
-   *  主人裁定：闪避再高也不能 100% 闪避、命中再低也不会 0% —— hitFloor=15% 是铁底 */
-  hitBase: 0.6,
+  /** 命中概率 = clamp(hitBase + 攻hit − 守dodge + 攻天选pt, hitFloor, hitCap)
+   *  F49（群友反馈）：命中率整体调高——常规对局几乎不 Miss，属性差夸张时才频繁落空 */
+  hitBase: 0.7,
   hitFloor: 0.15,
   hitCap: 0.9,
 
   // ---------- 属性钳制（Q27：上下限全进配置表） ----------
   clamp: {
-    dodge: { min: 0.02, max: 0.8 },
+    dodge: { min: 0.02, max: 0.5 },
     hit: { min: 0.02, max: 0.8 },
     crit: { min: 0.02, max: 1.0 },
     resist: { min: 0.02, max: 1.0 },
@@ -44,9 +44,13 @@ export const FORMULAS = {
   },
 
   // ---------- 伤害与治疗（§4.3） ----------
-  varianceMin: 0.9,
-  varianceMax: 1.1,
-  /** 暴击固定倍率（F22：无暴伤概念） */
+  /**
+   * 伤害波动（F49 群友反馈"偶尔来个近千伤害"）：跨度加大但期望仍 ≈1.0（0.72+1.28=2），
+   * 对称分布不偏袒任何一方——平时一两百，偶尔放大出视觉爆炸的大数字。
+   */
+  varianceMin: 0.72,
+  varianceMax: 1.28,
+  /** 暴击固定倍率（F22：无暴伤概念；视觉大数字主力=伤害波动与极端档属性） */
   critMult: 1.6,
   minDamage: 1,
   /** 易伤每实例（层）受伤增幅 */

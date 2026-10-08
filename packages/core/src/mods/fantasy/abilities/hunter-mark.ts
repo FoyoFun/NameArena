@@ -2,7 +2,7 @@ import { defineSkill } from './define';
 import { ailmentChance } from '../rules/combat';
 import { applyStatusInstance } from '../rules/effects';
 
-const CHANCE = 0.3;
+const CHANCE = 0.25;
 
 /** 猎人被动：自己与自己的召唤单位造成伤害时，概率使目标获得 1 层易伤 */
 export default defineSkill({

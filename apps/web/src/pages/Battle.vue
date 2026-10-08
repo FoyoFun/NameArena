@@ -42,9 +42,9 @@ async function startFromId(id: string): Promise<void> {
   void sequencer.play(events, m.display);
 }
 
-/** 本地快斗：种子掺时间戳，每次都是新战斗。fantasy 支持从取名实验室带来性别/职业选择（ga/ja/gb/jb） */
+/** 本地快斗：种子掺时间戳，每次都是新战斗。fantasy 支持从取名实验室带来性别选择（ga/gb；F52 起职业不可选） */
 function startLocalBattle(): void {
-  const q = route.query as { a?: string; b?: string; modId?: string; ga?: string; ja?: string; gb?: string; jb?: string };
+  const q = route.query as { a?: string; b?: string; modId?: string; ga?: string; gb?: string };
   modId.value = (q.modId as string) ?? 'normal-pvp';
   const m = getMod(modId.value);
   const parse = (s?: string) =>
@@ -58,14 +58,9 @@ function startLocalBattle(): void {
     const v = validateName(n);
     if (!v.ok) throw new Error(v.reason);
   }
-  const optsOf = (g?: string, j?: string): Record<string, unknown> | undefined => {
-    const opts: Record<string, unknown> = {};
-    if (g) opts['gender'] = g;
-    if (j) opts['jobId'] = j;
-    return Object.keys(opts).length ? opts : undefined;
-  };
-  const aOpts = optsOf(q.ga, q.ja);
-  const bOpts = optsOf(q.gb, q.jb);
+  const optsOf = (g?: string): Record<string, unknown> | undefined => (g ? { gender: g } : undefined);
+  const aOpts = optsOf(q.ga);
+  const bOpts = optsOf(q.gb);
   const config: BattleConfig = {
     modId: modId.value,
     kind: 'async',

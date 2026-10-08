@@ -45,9 +45,9 @@ export function mergeHooks(list: FantasyHooks[]): HookBag {
     };
   }
   if (has('modifyDamageOut')) {
-    bag.modifyDamageOut = (ctx, self, amount) => {
+    bag.modifyDamageOut = (ctx, self, amount, defender) => {
       let v = amount;
-      for (const h of list) v = h.modifyDamageOut?.(ctx, self, v) ?? v;
+      for (const h of list) v = h.modifyDamageOut?.(ctx, self, v, defender) ?? v;
       return v;
     };
   }

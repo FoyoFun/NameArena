@@ -8,13 +8,13 @@ export default defineSkill({
   label: 'common',
   cost: 4,
   weight: 1,
-  desc: '造成 1.1 倍伤害，25% 概率眩晕敌人一回合。',
+  desc: '造成 1.1 倍伤害，15% 概率眩晕敌人一回合。',
   vfx: 'slash',
   active: {
     target: 'enemy',
     effects: [
       { type: 'damage', scale: 1.1 },
-      { type: 'status', status: 'stun', chance: 0.25, ailmentScale: 0.5 },
+      { type: 'status', status: 'stun', chance: 0.15, ailmentScale: 0.35 },
     ],
   },
 });

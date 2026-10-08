@@ -92,12 +92,25 @@ export const SKILL_LABEL_TEXT: Record<SkillLabel, string> = { phys: '物理', ma
 export interface DamageEffect {
   type: 'damage';
   scale: number;
-  /** 追击模型（Q2 方案A）：每段后以 p 概率追击下一段，最多 max 段。缺省=单段 */
-  chase?: { p: number; max: number };
+  /**
+   * 多段追击模型（F48 起默认规则）：每段后以 p 概率追击下一段，最多 max 段。缺省=单段。
+   * 铁律（主人裁定）：今后一切多 Hit 技能，每段 Hit 都**独立结算**命中、暴击、
+   * 骑士被动减伤等一切逐伤害判定，除非特殊说明。
+   */
+  chase?: {
+    p: number;
+    max: number;
+    /** 追击概率的天选影响缩放（<1 削弱天选对该 roll 的影响；主人裁定：连击段数少受天选摆布） */
+    ptScale?: number;
+  };
 }
 export interface HealEffect {
   type: 'heal';
   scale: number;
+  /** 触发概率（缺省 1 必定发生；药师危险实验等概率型治疗用） */
+  chance?: number;
+  /** 缺省按主动技 target 解析；'self' 强制治疗施法者自己（药师危险实验用） */
+  to?: 'self';
 }
 export interface StatusEffect {
   type: 'status';
@@ -129,6 +142,11 @@ export interface ActiveSpec {
   castScale?: number;
   /** 造成伤害的一部分转为自身生命（吸血） */
   drainRatio?: number;
+  /**
+   * 召唤技的一次性补偿（F51）：本场该技能已召唤过时，技能改为一次普通伤害打击。
+   * 只配在明确要求的技能上（如猎人呼唤猎犬）；未配置时已用过就只走 summonPet 的失败提示。
+   */
+  summonFallback?: { scale: number };
   effects: SkillEffect[];
 }
 
@@ -157,8 +175,8 @@ export interface FantasyHooks {
   onBuffApplied?(ctx: BattleContext, self: UnitRuntime, target: UnitRuntime, statusId: string): void;
   /** 自己完成治疗后（药理·正面） */
   onHealDone?(ctx: BattleContext, self: UnitRuntime, target: UnitRuntime, amount: number): void;
-  /** 发起直接伤害时的输出修正（黑魔积蓄） */
-  modifyDamageOut?(ctx: BattleContext, self: UnitRuntime, amount: number): number;
+  /** 发起直接伤害时的输出修正（黑魔积蓄；刺客弱点洞悉按目标异常数增伤） */
+  modifyDamageOut?(ctx: BattleContext, self: UnitRuntime, amount: number, defender: UnitRuntime): number;
   /** 索敌时询问：本次是否改用反仇恨权重（刺客猎杀直觉） */
   useInverseTargeting?(ctx: BattleContext, self: UnitRuntime): boolean;
   /** 回合内追加行动次数 roll（二连击），每次追加计 0.8×单位权重 */

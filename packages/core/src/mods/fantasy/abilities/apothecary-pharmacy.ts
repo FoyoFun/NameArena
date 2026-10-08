@@ -9,11 +9,11 @@ export default defineSkill({
   kind: 'passive',
   cost: 6,
   weight: 0,
-  desc: `造成伤害时 30% 概率附加随机负面状态（受异常率影响）；治疗时 30% 概率附加随机增益。`,
+  desc: `造成伤害时 25% 概率附加随机负面状态（受异常率影响）；治疗时 30% 概率附加随机增益。`,
   passive: {
     onDealtDamage(ctx, self, p) {
       if (!self.alive || !p.defender.alive) return;
-      applyRandomStatusFromPool(ctx, self, p.defender, RANDOM_DEBUFF_POOL, 0.1, 0.3, 0.8);
+      applyRandomStatusFromPool(ctx, self, p.defender, RANDOM_DEBUFF_POOL, 0.1, 0.25, 0.8);
     },
     onHealDone(ctx, self, target) {
       if (!self.alive || !target.alive) return;

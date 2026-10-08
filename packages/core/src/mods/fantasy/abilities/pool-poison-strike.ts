@@ -8,13 +8,13 @@ export default defineSkill({
   label: 'phys',
   cost: 4,
   weight: 1,
-  desc: '造成 1.0 倍伤害，35% 概率使敌人中毒（每跳 10% 攻击）。',
+  desc: '造成 1.0 倍伤害，22% 概率使敌人中毒（每跳 10% 攻击）。',
   vfx: 'slash',
   active: {
     target: 'enemy',
     effects: [
       { type: 'damage', scale: 1.0 },
-      { type: 'status', status: 'poison', chance: 0.35, powerScaleAtk: 0.1 },
+      { type: 'status', status: 'poison', chance: 0.22, powerScaleAtk: 0.1 },
     ],
   },
 });

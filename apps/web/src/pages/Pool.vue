@@ -2,7 +2,7 @@
 import { computed, onActivated, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { api, type ModInfo, type TeamInfo } from '../api';
-import { fantasySeed, getMod, JOBS, makeRng, nameSeed, validateName } from '@namearena/core';
+import { fantasySeed, getMod, makeRng, nameSeed, validateName } from '@namearena/core';
 import CharacterPanel from '../components/CharacterPanel.vue';
 import GameIcon from '../components/GameIcon.vue';
 import PageHero from '../components/PageHero.vue';
@@ -24,10 +24,9 @@ const error = ref('');
 
 // ---- 创建队伍（原「我的队伍」页，决策 #68 并入本页）----
 
-/** 每行的生成选项（fantasy 用；'' = 随机） */
+/** 每行的生成选项（fantasy 用；'' = 随机。F52 起职业不可选） */
 const members = ref<string[]>([]);
 const memberGenders = ref<string[]>([]);
-const memberJobs = ref<string[]>([]);
 const createError = ref('');
 const createBusy = ref(false);
 /** 当前展开详情的队伍 id（'' = 无） */
@@ -72,7 +71,6 @@ async function resetForMode() {
   const max = mods.value.find((m) => m.id === activeMod.value)?.maxUnits ?? 5;
   members.value = Array.from({ length: max }, () => '');
   memberGenders.value = Array.from({ length: max }, () => '');
-  memberJobs.value = Array.from({ length: max }, () => '');
   createError.value = '';
   expanded.value = '';
 }
@@ -99,7 +97,6 @@ const filled = computed(() => validMembers.value.filter((v) => v !== null) as { 
 function rowOpts(i: number): Record<string, unknown> | undefined {
   const opts: Record<string, unknown> = {};
   if (memberGenders.value[i]) opts['gender'] = memberGenders.value[i];
-  if (memberJobs.value[i]) opts['jobId'] = memberJobs.value[i];
   return Object.keys(opts).length ? opts : undefined;
 }
 
@@ -139,7 +136,6 @@ async function create() {
     await api.createTeam(activeMod.value, payload);
     members.value = members.value.map(() => '');
     memberGenders.value = memberGenders.value.map(() => '');
-    memberJobs.value = memberJobs.value.map(() => '');
     await refresh();
   } catch (e) {
     createError.value = (e as Error).message;
@@ -262,10 +258,6 @@ function winrate(t: TeamInfo): string {
             <option value="">性别随机</option>
             <option value="male">♂ 男</option>
             <option value="female">♀ 女</option>
-          </select>
-          <select v-model="memberJobs[i]" class="input">
-            <option value="">职业随机</option>
-            <option v-for="j in JOBS" :key="j.id" :value="j.id">{{ j.name }}</option>
           </select>
         </template>
       </div>

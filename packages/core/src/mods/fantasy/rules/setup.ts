@@ -98,15 +98,25 @@ function petStats(summoner: UnitRuntime, pet: PetDef): Record<string, number> {
   };
 }
 
-/** 召唤（§5.7）：不占队伍人数、不计分、受 24 上限；满员时技能照放但召唤失败（F15） */
-export function summonPet(ctx: BattleContext, summoner: UnitRuntime, petId: string): void {
+/** 召唤（§5.7）：不占队伍人数、不计分、受 24 上限；满员时技能照放但召唤失败（F15）。
+ *  F51：同一召唤者的同种召唤物场上唯一——已有一只活着时再次召唤失败（战报提示），死了才可再召。 */
+export function summonPet(ctx: BattleContext, summoner: UnitRuntime, petId: string): boolean {
   const pet = PETS[petId];
-  if (!pet) return;
+  if (!pet) return false;
+  const aliveDup = ctx.state.units.some(
+    (u) => u.alive && u.meta['pet'] === true && u.meta['petId'] === petId && u.meta['summonerUid'] === summoner.uid,
+  );
+  if (aliveDup) {
+    ctx.emit('log', { uid: summoner.uid, type: 'summonFail' }, [
+      { target: `unit:${summoner.uid}`, durationMs: 400, logText: `🐾 @${summoner.uid}@ 的${pet.name}还在场上，召唤失败了` },
+    ]);
+    return false;
+  }
   if (ctx.state.units.length >= FORMULAS.maxUnitsOnField) {
     ctx.emit('log', { uid: summoner.uid, type: 'summonFail' }, [
       { target: `unit:${summoner.uid}`, durationMs: 400, logText: `🐾 场上已满员，@${summoner.uid}@ 的召唤失败了` },
     ]);
-    return;
+    return false;
   }
   const seq = (ctx.state.scratch['petSeq'] as number | undefined) ?? 0;
   ctx.state.scratch['petSeq'] = seq + 1;
@@ -126,6 +136,7 @@ export function summonPet(ctx: BattleContext, summoner: UnitRuntime, petId: stri
   unit.meta['weight'] = FORMULAS.summonWeight;
   unit.meta['lastHarmTick'] = 0;
   unit.meta['pet'] = true;
+  unit.meta['petId'] = petId;
   unit.meta['summonerUid'] = summoner.uid;
   unit.meta['owner'] = summoner.name; // 表现层显示「谁的召唤物」
   unit.meta['hooks'] = aggregateCharHooks(char as unknown as Character);
@@ -133,6 +144,7 @@ export function summonPet(ctx: BattleContext, summoner: UnitRuntime, petId: stri
   ctx.emit('log', { uid, type: 'summon', unit: unitSnapshot(unit) }, [
     { target: `unit:${uid}`, vfx: 'buff', durationMs: 700, logText: `🐾 @${summoner.uid}@ 召唤出了 ${pet.name}！` },
   ]);
+  return true;
 }
 
 // ---------- 快照 ----------

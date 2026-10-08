@@ -2,8 +2,8 @@ import { defineSkill } from './define';
 import { effStat, favor } from '../rules/combat';
 import { healUnit } from '../rules/effects';
 
-const CHANCE = 0.35;
-const SCALE = 0.2;
+const CHANCE = 0.18;
+const SCALE = 0.22;
 
 /** 白魔导师被动：造成伤害时概率恢复生命百分比最低的队友 */
 export default defineSkill({

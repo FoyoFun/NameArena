@@ -67,25 +67,33 @@ describe('幻想大乱斗 角色生成', () => {
     expect(found).toBeGreaterThan(0);
   });
 
-  it('性别/职业可选：同选同名必同角色；选择参与种子（不同选择→不同六维）；非法选择拒绝', () => {
+  it('性别可选、职业纯随机：同选同名必同角色；选择参与种子（不同性别→不同六维）；非法性别拒绝', () => {
     // 同选确定性
-    const a = generateFantasyCharacter('选职业', FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { gender: 'female', jobId: 'knight' });
-    const b = generateFantasyCharacter('选职业', FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { gender: 'female', jobId: 'knight' });
+    const a = generateFantasyCharacter('选性别', FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { gender: 'female' });
+    const b = generateFantasyCharacter('选性别', FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { gender: 'female' });
     expect(b).toEqual(a);
-    expect(a.jobId).toBe('knight');
     expect(a.gender).toBe('female');
-    // 选择参与种子：同名字不同职业 → 六维不同（大概率）
-    const c = generateFantasyCharacter('选职业', FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { gender: 'female', jobId: 'assassin' });
+    // 职业由种子随机（F52：不再可选）
+    expect(JOBS.map((j) => j.id)).toContain(a.jobId);
+    // 选择参与种子：同名字不同性别 → 角色不同（大概率）
+    const c = generateFantasyCharacter('选性别', FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { gender: 'male' });
     expect(JSON.stringify(c.base) === JSON.stringify(a.base)).toBe(false);
-    // 选择对属性无偏置：骑士选择也可以出低防高攻（分布本身不因选择改变——六维仍走全量分布表）
-    let sawHighAtk = false;
-    for (let i = 0; i < 60 && !sawHighAtk; i++) {
-      const k = generateFantasyCharacter(`骑士${i}号`, FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { jobId: 'knight' });
-      if (k.base.str > 80) sawHighAtk = true; // 纸面高攻的骑士可能出现
+    // 选择对属性无偏置：同性别职业随机的分布不变（六维仍走全量分布表）
+    let sawHighStr = false;
+    for (let i = 0; i < 60 && !sawHighStr; i++) {
+      const k = generateFantasyCharacter(`随机${i}号`, FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { gender: 'male' });
+      if (k.base.str > 80) sawHighStr = true;
     }
-    expect(sawHighAtk).toBe(true);
-    // 非法选择拒绝制
-    expect(() => generateFantasyCharacter('选职业', FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { jobId: '暗黑骑士' as never })).toThrow();
-    expect(() => generateFantasyCharacter('选职业', FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { gender: '未知' as never })).toThrow();
+    expect(sawHighStr).toBe(true);
+    // 非法性别拒绝制
+    expect(() => generateFantasyCharacter('选性别', FANTASY_GEN_KEY, FANTASY_GEN_VERSION, { gender: '未知' as never })).toThrow();
+  });
+
+  it('职业分布：大量生成时 11 职业都会出现（种子随机而非固定）', () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 220; i++) {
+      seen.add(generateFantasyCharacter(`职业${i}号`, FANTASY_GEN_KEY, FANTASY_GEN_VERSION).jobId);
+    }
+    expect(seen.size).toBe(JOBS.length);
   });
 });

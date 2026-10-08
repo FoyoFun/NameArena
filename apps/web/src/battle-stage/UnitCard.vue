@@ -95,8 +95,8 @@ function vfxEmojiOf(v: { vfx: string; emoji: string }): string {
       <!-- 状态行 + 技能开关：同一行，开关靠右（主人拍板：不单独占行） -->
       <div class="status-line">
         <div class="status-row">
-          <span v-for="s in unit.statuses" :key="s.id" class="status-ico" :class="s.kind" :title="s.name">
-            {{ s.kind === 'buff' ? '⬆' : '⬇' }}{{ s.name }}
+          <span v-for="s in unit.statuses" :key="s.id" class="status-ico" :class="s.kind" :title="`${s.name} ×${s.count}`">
+            {{ s.kind === 'buff' ? '⬆' : '⬇' }}{{ s.name }}{{ s.count > 1 ? `×${s.count}` : '' }}
           </span>
         </div>
         <button type="button" class="ab-toggle" @click="abilitiesOpen = !abilitiesOpen">

@@ -108,7 +108,7 @@ describe('幻想大乱斗 二期机制', () => {
     void ailmentChance;
   });
 
-  it('命中保底：极端闪避差下命中概率仍 ≥ 15%（hitFloor）；天选突破只加不减', () => {
+  it('命中保底：极端闪避差下命中概率仍 ≥ 15%（hitFloor）；守方天选突破闪避上限后也触铁底', () => {
     expect(FORMULAS.hitFloor).toBeGreaterThanOrEqual(0.15);
     expect(FORMULAS.hitCap).toBeLessThanOrEqual(1);
     const config = cfg([craft('攻方', 'assassin', 5)], [craft('守方', 'knight', 999)]);
@@ -117,14 +117,18 @@ describe('幻想大乱斗 二期机制', () => {
     const a = ctx.state.units[0]!;
     const b = ctx.state.units[1]!;
     a.stats['hit'] = 0.02; // 极低命中
-    b.stats['dodge'] = 0.8; // 极高闪避（钳制上限）
-    // 双方天选清零 → 恰好等于铁底
+    b.stats['dodge'] = FORMULAS.clamp.dodge.max; // 极高闪避（钳制上限 0.5，F49）
+    // 双方天选清零 → 0.7+0.02-0.5 = 0.22，未触铁底但 ≥ floor
     a.stats['destiny'] = 0;
     b.stats['destiny'] = 0;
+    expect(hitChance(ctx, a, b)).toBeCloseTo(FORMULAS.hitBase + 0.02 - FORMULAS.clamp.dodge.max);
+    expect(hitChance(ctx, a, b)).toBeGreaterThanOrEqual(FORMULAS.hitFloor);
+    // 守方天选突破闪避上限 → 攻方命中被压到铁底 15%
+    b.stats['destiny'] = 400;
+    a.stats['destiny'] = 0;
     expect(hitChance(ctx, a, b)).toBeCloseTo(FORMULAS.hitFloor);
-    // 恢复天选 → 突破只加不减（≥ 铁底，且 ≤ 100%）
+    // 攻方天选恢复 → 突破只加不减（≥ 铁底，且 ≤ 100%）
     a.stats['destiny'] = 300;
-    b.stats['destiny'] = 300;
     const p = hitChance(ctx, a, b);
     expect(p).toBeGreaterThanOrEqual(FORMULAS.hitFloor);
     expect(p).toBeLessThanOrEqual(1);

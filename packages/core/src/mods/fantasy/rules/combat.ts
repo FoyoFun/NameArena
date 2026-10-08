@@ -49,9 +49,12 @@ export function ailmentChance(ctx: BattleContext, caster: UnitRuntime, base: num
   return Math.min(1, softCap(raw, FORMULAS.ailmentSoftCap) + pt * FORMULAS.ailmentBreakCoef);
 }
 
-/** 己方有利判定的统一入口：基础概率 + 天选pt（钳到 [floor, cap]），再按突破系数补足可越过 cap（F44） */
-export function favor(ctx: BattleContext, unit: UnitRuntime, base: number, floor = 0, cap = 1): number {
-  const pt = destinyPt(unit);
+/**
+ * 己方有利判定的统一入口：基础概率 + 天选pt（钳到 [floor, cap]），再按突破系数补足可越过 cap（F44）。
+ * ptScale（F49）：部分技能要"降低天选的影响"（骑士铁壁/战士嗜血/格斗连拳段数等），传 <1 的系数即可。
+ */
+export function favor(ctx: BattleContext, unit: UnitRuntime, base: number, floor = 0, cap = 1, ptScale = 1): number {
+  const pt = destinyPt(unit) * ptScale;
   const clamped = Math.min(cap, Math.max(floor, base + pt));
   return Math.min(1, clamped + pt * FORMULAS.destinyBreakCoef);
 }
@@ -100,7 +103,7 @@ export function calcDamage(
   const size = 1 + FORMULAS.meleeSizeBonus * (((ctx.state.scratch['initialCount'] as number | undefined) ?? 2) - 2);
   let amount = A * scale * ratio * vuln * size * variance(ctx);
   if (crit) amount *= FORMULAS.critMult;
-  amount = hooksOf(attacker).modifyDamageOut?.(ctx, attacker, amount) ?? amount;
+  amount = hooksOf(attacker).modifyDamageOut?.(ctx, attacker, amount, defender) ?? amount;
   amount = hooksOf(defender).modifyIncomingDamage?.(ctx, defender, amount, attacker) ?? amount;
   return Math.max(FORMULAS.minDamage, Math.round(amount));
 }

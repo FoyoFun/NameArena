@@ -8,13 +8,13 @@ export default defineSkill({
   label: 'common',
   cost: 4,
   weight: 0,
-  desc: '以荣光贯刺敌人，造成 1.0 倍伤害，15% 概率眩晕。',
+  desc: '以荣光贯刺敌人，造成 1.0 倍伤害，8% 概率眩晕。',
   vfx: 'slash',
   active: {
     target: 'enemy',
     effects: [
       { type: 'damage', scale: 1.0 },
-      { type: 'status', status: 'stun', chance: 0.15, ailmentScale: 0.5 },
+      { type: 'status', status: 'stun', chance: 0.08, ailmentScale: 0.35 },
     ],
   },
 });

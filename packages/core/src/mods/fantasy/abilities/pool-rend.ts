@@ -8,13 +8,13 @@ export default defineSkill({
   label: 'phys',
   cost: 4,
   weight: 1,
-  desc: '造成 1.0 倍伤害，35% 概率使敌人流血（每跳损失当前生命的 4%）。',
+  desc: '造成 1.0 倍伤害，22% 概率使敌人流血（每跳损失当前生命的 4%）。',
   vfx: 'slash',
   active: {
     target: 'enemy',
     effects: [
       { type: 'damage', scale: 1.0 },
-      { type: 'status', status: 'bleed', chance: 0.35 },
+      { type: 'status', status: 'bleed', chance: 0.22 },
     ],
   },
 });

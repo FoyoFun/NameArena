@@ -8,7 +8,7 @@ import { STATUS_MAP } from './data/statuses';
 import { STAT_TIERS } from './data/stat-distribution';
 import { FORMULAS } from './data/formulas';
 import { FANTASY_BOSSES, FANTASY_BOSS_MAP, bossCharacter } from './data/bosses';
-import type { BaseStatId, Character, Gender, JobId } from './types';
+import type { BaseStatId, Character, Gender } from './types';
 import { JOB_MAP } from './data/jobs';
 
 export { generateFantasyCharacter, fantasySeed } from './generation';
@@ -24,8 +24,9 @@ export { unitSnapshot } from './rules/setup';
 
 /** 生成域与版本：幻想大乱斗 PVP/PVE 共用，同名同选必同角色（DESIGN-FANTASY.md §0） */
 export const FANTASY_GEN_KEY = 'fantasy';
-/** v3：性别/职业选择参与种子（F42）。改变"名字→角色"映射的修改必须递增版本号 */
-export const FANTASY_GEN_VERSION = 3;
+/** v4（F52）：职业改种子随机、性别参与种子；映射/公式大改版全量重roll。
+ *  改变"名字→角色"映射的修改必须递增版本号 */
+export const FANTASY_GEN_VERSION = 4;
 
 /** UnitCard 展示哪些数值——F47：玩家只看基础属性，战斗属性全部隐藏（HP 条除外，观战必需） */
 export const FANTASY_STATS: StatMeta[] = [
@@ -33,7 +34,7 @@ export const FANTASY_STATS: StatMeta[] = [
   { id: 'atk', label: '攻击', show: 'hidden' },
   { id: 'def', label: '防御', show: 'hidden' },
   { id: 'spd', label: '速度', show: 'hidden', desc: '行动与咏唱速率' },
-  { id: 'crit', label: '暴击', show: 'hidden', desc: '暴击固定×1.6' },
+  { id: 'crit', label: '暴击', show: 'hidden', desc: '暴击固定×1.75' },
   { id: 'hit', label: '命中', show: 'hidden' },
   { id: 'dodge', label: '闪避', show: 'hidden' },
   { id: 'resist', label: '抵抗', show: 'hidden', desc: '摆脱异常状态的概率' },
@@ -99,13 +100,11 @@ export function buildFantasyMod(kind: 'pvp' | 'pve'): Mod {
     generateCharacter: (_rng, opts) =>
       generateFantasyCharacter(opts.name, FANTASY_GEN_KEY, FANTASY_GEN_VERSION, opts.opts as FantasyGenOpts | undefined),
     rules: fantasyRuleset(kind, FANTASY_GEN_KEY, FANTASY_GEN_VERSION),
-    /** 建队校验：性别/职业选择的合法性（拒绝制） */
+    /** 建队校验：性别选择的合法性（拒绝制）。jobId 已废弃（F52 职业全随机）——宽容忽略，兼容旧队伍数据 */
     validateGenOpts(opts) {
       if (!opts) return null;
       const g = opts['gender'] as Gender | undefined;
       if (g !== undefined && g !== 'male' && g !== 'female') return `未知性别：${String(g)}`;
-      const j = opts['jobId'] as JobId | undefined;
-      if (j !== undefined && !JOB_MAP.has(j)) return `未知职业：${String(j)}`;
       return null;
     },
     team:

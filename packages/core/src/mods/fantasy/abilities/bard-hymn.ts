@@ -8,13 +8,13 @@ export default defineSkill({
   label: 'phys',
   cost: 4,
   weight: 0,
-  desc: '歌声蕴藏杀意：造成 0.8 倍伤害，8% 概率使敌人流血或中毒（异常率对此技影响极大）。',
+  desc: '歌声蕴藏杀意：造成 1.15 倍伤害，6% 概率使敌人流血或中毒（异常率对此技影响极大）。',
   vfx: 'slash',
   active: {
     target: 'enemy',
     effects: [
-      { type: 'damage', scale: 0.8 },
-      { type: 'status', status: 'bleed', pool: ['bleed', 'poison'], chance: 0.08, ailmentScale: 1.2, powerScaleAtk: 0.1 },
+      { type: 'damage', scale: 1.15 },
+      { type: 'status', status: 'bleed', pool: ['bleed', 'poison'], chance: 0.06, ailmentScale: 1.2, powerScaleAtk: 0.1 },
     ],
   },
 });
