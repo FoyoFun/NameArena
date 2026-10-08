@@ -98,7 +98,8 @@ export const api = {
     defenderTeamId?: string;
     bossId?: string;
   }) => request<{ id: string }>('/api/battles', 'POST', payload),
-  battles: () => request<BattleListItem[]>('/api/battles'),
+  /** 战报列表（决策 #65/#66）：服务器只返回与「我」有关、指定模式、3 天内的对局 */
+  battles: (modId: string) => request<BattleListItem[]>(`/api/battles?modId=${encodeURIComponent(modId)}`),
   battle: (id: string) => request<BattleRecordDto>(`/api/battles/${id}`),
   ladder: (modId: string, min = 5) => request<LadderRow[]>(`/api/ladder?modId=${encodeURIComponent(modId)}&min=${min}`),
   pveLadder: (modId: string, bossId: string) =>

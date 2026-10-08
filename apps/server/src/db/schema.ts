@@ -10,6 +10,8 @@ export const players = sqliteTable(
     nickname: text('nickname').notNull(),
     discr: text('discr').notNull(),
     createdAt: text('created_at').notNull(),
+    /** 最近一次带令牌请求的时刻（7 天未登录 → 清理其全部队伍，决策 #66） */
+    lastSeenAt: text('last_seen_at'),
   },
   (t) => [uniqueIndex('players_nickname_discr').on(t.nickname, t.discr)],
 );
@@ -37,6 +39,9 @@ export const battles = sqliteTable('battles', {
   reason: text('reason').notNull().default(''),
   createdAt: text('created_at').notNull(),
   roomId: text('room_id'),
+  /** 参战双方归属（战报只显示与自己有关的对局，决策 #65）；快斗/观战类为 NULL */
+  attackerToken: text('attacker_token'),
+  defenderToken: text('defender_token'),
 });
 
 export const ladder = sqliteTable(
@@ -58,6 +63,8 @@ export const pveRecords = sqliteTable('pve_records', {
   bossId: text('boss_id').notNull(),
   /** 进攻方队伍快照（队伍可能被删，展示自足） */
   teamNames: text('team_names').notNull(),
+  /** 进攻方队伍 id（讨伐榜只显示现存队伍的记录，决策 #67；存量行为 NULL，保留显示） */
+  teamId: text('team_id'),
   owner: text('owner').notNull(),
   win: integer('win').notNull(),
   /** 行动数（计权后取整） */

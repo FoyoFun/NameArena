@@ -6,8 +6,10 @@ import type { ModInfo } from './api';
  * 由服务端 mods 列表驱动。模式决定侧栏页签与各页的生成域；
  * 侧栏顶部下拉切换，选择持久化到 localStorage。
  *
- * 页签归属约定：1vs1 → PVP 域专属；我的队伍 / 战斗 / 战报 双域共有；
- * 竞技场（讨伐）双域共有但排版随模式；讨伐榜 → PVE 域专属。
+ * 页签归属约定（决策 #68：「我的队伍」并入竞技场页，「战斗」改为战斗页内返回键）：
+ * 1vs1 → PVP 域专属；竞技场（建队/互斗/挑战/讨伐）/ 战报 双域共有；
+ * 天梯 → 双域共有但 PVE 域叫讨伐榜。/battle/* 路由不属于任何页签，
+ * 由战斗页的返回键回到来源（routeInMode 始终放行）。
  */
 
 export interface ModeTab {
@@ -26,17 +28,13 @@ export interface ModeDef {
 
 const PVP_TABS: ModeTab[] = [
   { path: '/', label: '1vs1', icon: 'lab' },
-  { path: '/teams', label: '我的队伍', icon: 'team' },
   { path: '/pool', label: '竞技场', icon: 'arena' },
-  { path: '/battle', label: '战斗', icon: 'swords' },
   { path: '/history', label: '战报', icon: 'report' },
   { path: '/ladder', label: '天梯', icon: 'ladder' },
 ];
 
 const PVE_TABS: ModeTab[] = [
-  { path: '/teams', label: '我的队伍', icon: 'team' },
   { path: '/pool', label: '讨伐', icon: 'skull' },
-  { path: '/battle', label: '战斗', icon: 'swords' },
   { path: '/history', label: '战报', icon: 'report' },
   { path: '/ladder', label: '讨伐榜', icon: 'ladder' },
 ];
@@ -78,8 +76,10 @@ function setMods(list: ModInfo[]): void {
   }
 }
 
-/** 当前路径是否属于当前模式的页签（battle 前缀路由按前缀判断） */
+/** 当前路径是否属于当前模式的页签（battle 前缀路由按前缀判断）。
+ *  /battle/* 从任何模式的入口都能进（决策 #68），始终视为属于当前模式。 */
 function routeInMode(path: string): boolean {
+  if (path.startsWith('/battle')) return true;
   const tabs = activeMode.value?.tabs ?? [];
   return tabs.some((t) => (t.exact ? path === t.path : path === t.path || path.startsWith(`${t.path}/`)));
 }

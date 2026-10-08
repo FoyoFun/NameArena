@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api, ensureMe, getMe, renameMe } from './api';
-import { lastBattlePath } from './battleNav';
-import { sequencer } from './battle-stage/sequencer';
 import { useMode } from './mode';
 import GameIcon from './components/GameIcon.vue';
 import ModeSelect from './components/ModeSelect.vue';
@@ -31,13 +29,12 @@ onMounted(async () => {
     /* 服务器不在时走兜底 */
   }
   ready.value = true;
-  // 初始路径不属于当前模式的页签（如 PVE 模式下直接打开 1vs1 链接）→ 跳默认页
+  // 初始路径不属于当前模式的页签（如 PVE 模式下直接打开 1vs1 链接）→ 跳默认页；
+  // /battle/* 由 routeInMode 放行（决策 #68：战斗从任何模式入口进入）
   if (!routeInMode(route.path)) {
     router.replace(activeMode.value?.tabs[0]!.path ?? '/');
   }
 });
-
-const isBattleRoute = computed(() => route.path.startsWith('/battle'));
 
 /** 切换模式后若当前页不属于新模式页签，跳到新模式第一个页签 */
 watch(activeMode, (mode) => {
@@ -51,14 +48,6 @@ watch(activeMode, (mode) => {
 watch(() => route.fullPath, () => {
   ibOpen.value = false;
 });
-
-function goBattle() {
-  if (!lastBattlePath.value) {
-    alert('还没有进行中的战斗——先去 1vs1 快斗一场，或去竞技场挑战');
-    return;
-  }
-  router.push(lastBattlePath.value);
-}
 
 async function doRename() {
   const n = newNick.value.trim();
@@ -107,18 +96,9 @@ function settingsPlaceholder() {
       </div>
 
       <nav v-if="activeMode" class="side-nav">
-        <template v-for="t in activeMode.tabs" :key="t.path">
-          <a
-            v-if="t.path === '/battle'"
-            :class="{ 'router-link-active': isBattleRoute, dimmed: !lastBattlePath }"
-            @click="goBattle"
-          >
-            <GameIcon name="swords" :size="16" />{{ t.label }}<i v-if="sequencer.state.playing" class="live-dot" />
-          </a>
-          <router-link v-else :to="t.path">
-            <GameIcon :name="t.icon" :size="16" />{{ t.label }}
-          </router-link>
-        </template>
+        <router-link v-for="t in activeMode.tabs" :key="t.path" :to="t.path">
+          <GameIcon :name="t.icon" :size="16" />{{ t.label }}
+        </router-link>
       </nav>
 
       <!-- 工具按钮（预留系统设置等） -->
@@ -135,26 +115,17 @@ function settingsPlaceholder() {
         <GameIcon :name="ibOpen ? 'cross' : 'expand'" :size="16" />
       </button>
       <div v-if="activeMode" class="ib-nav">
-        <template v-for="t in activeMode.tabs" :key="t.path">
-          <router-link
-            v-if="t.path !== '/battle'"
-            v-slot="{ isExactActive, isActive, href, navigate }"
-            :to="t.path"
-            custom
-          >
-            <a :href="href" class="ib-item" :class="{ 'router-link-active': t.path === '/' ? isExactActive : isActive }" @click="navigate">
-              <GameIcon :name="t.icon" :size="17" />
-            </a>
-          </router-link>
-          <a
-            v-else
-            :class="{ 'router-link-active': isBattleRoute, dimmed: !lastBattlePath }"
-            @click="goBattle"
-          >
-            <i v-if="sequencer.state.playing" class="live-dot" />
-            <GameIcon name="swords" :size="17" />
+        <router-link
+          v-for="t in activeMode.tabs"
+          :key="t.path"
+          v-slot="{ isExactActive, isActive, href, navigate }"
+          :to="t.path"
+          custom
+        >
+          <a :href="href" class="ib-item" :class="{ 'router-link-active': t.path === '/' ? isExactActive : isActive }" @click="navigate">
+            <GameIcon :name="t.icon" :size="17" />
           </a>
-        </template>
+        </router-link>
       </div>
       <button class="ib-toggle" title="系统设置（敬请期待）" @click="settingsPlaceholder">
         <GameIcon name="cog" :size="16" />
@@ -163,18 +134,9 @@ function settingsPlaceholder() {
 
     <!-- 展开的完整菜单（覆盖层） -->
     <div v-if="ibOpen && activeMode" class="iconbar ib-menu">
-      <template v-for="t in activeMode.tabs" :key="t.path">
-        <a
-          v-if="t.path === '/battle'"
-          :class="{ 'router-link-active': isBattleRoute, dimmed: !lastBattlePath }"
-          @click="goBattle"
-        >
-          <GameIcon name="swords" :size="16" />{{ t.label }}<i v-if="sequencer.state.playing" class="live-dot" />
-        </a>
-        <router-link v-else :to="t.path">
-          <GameIcon :name="t.icon" :size="16" />{{ t.label }}
-        </router-link>
-      </template>
+      <router-link v-for="t in activeMode.tabs" :key="t.path" :to="t.path">
+        <GameIcon :name="t.icon" :size="16" />{{ t.label }}
+      </router-link>
       <div class="ib-tools">
         <a class="navbtn" @click="settingsPlaceholder"><GameIcon name="cog" :size="15" />系统设置</a>
       </div>
@@ -213,26 +175,6 @@ function settingsPlaceholder() {
 </template>
 
 <style scoped>
-.dimmed {
-  opacity: 0.45;
-}
-
-.live-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--hp-lo);
-  box-shadow: 0 0 6px var(--hp-lo);
-  margin-left: 2px;
-  animation: livePulse 1.2s ease-in-out infinite;
-}
-
-@keyframes livePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-
 .rename-row {
   display: flex;
   gap: 6px;

@@ -21,12 +21,19 @@ function getPlayerByToken(token: string | undefined) {
   return db.select().from(players).where(eq(players.token, token)).get() ?? null;
 }
 
+/** 活跃时间的写放大节流：距上次记录超过 1 小时才落库（判定 7 天未登录足够精确） */
+const LAST_SEEN_THROTTLE_MS = 3600_000;
+
 function requirePlayer(req: FastifyRequest, reply: FastifyReply) {
   const token = req.headers['x-token'] as string | undefined;
   const player = getPlayerByToken(token);
   if (!player) {
     reply.code(401).send({ error: '需要有效的身份令牌（请刷新页面重新注册）' });
     return null;
+  }
+  const t = now();
+  if (!player.lastSeenAt || (t > player.lastSeenAt && Date.parse(t) - Date.parse(player.lastSeenAt) > LAST_SEEN_THROTTLE_MS)) {
+    db.update(players).set({ lastSeenAt: t }).where(eq(players.token, player.token)).run();
   }
   return player;
 }
@@ -353,6 +360,10 @@ export function registerRoutes(app: FastifyInstance): void {
     // 服务器即时模拟；entropy 取当前时间 → 结果不固定；配置+种子落库后可无限重演
     const record = createBattle(mod, config, Date.now());
     const id = randomUUID();
+    // 参战方归属落库（决策 #65）：战报列表按 token 过滤「与我有关」，改名也不失配
+    const defenderToken = kind === 'pve' ? null : (body.defenderTeamId
+      ? db.select({ t: teams.ownerToken }).from(teams).where(eq(teams.id, body.defenderTeamId)).get()?.t ?? null
+      : null);
     db.insert(battles)
       .values({
         id,
@@ -364,6 +375,8 @@ export function registerRoutes(app: FastifyInstance): void {
         rounds: record.result.rounds,
         reason: record.result.reason,
         createdAt: now(),
+        attackerToken: player.token,
+        defenderToken,
       })
       .run();
 
@@ -378,6 +391,7 @@ export function registerRoutes(app: FastifyInstance): void {
           modId: mod.id,
           bossId: body.bossId ?? '',
           teamNames: JSON.stringify(config.teams[0]!.units.map((u) => u.name)),
+          teamId: attacker.id,
           owner: displayName(player),
           win: record.result.winner === 'A' ? 1 : 0,
           actions: record.result.rounds,
@@ -395,10 +409,30 @@ export function registerRoutes(app: FastifyInstance): void {
     return { id };
   });
 
-  app.get('/api/battles', async (req) => {
-    const q = req.query as { limit?: string };
-    const limit = Math.min(100, Number(q.limit ?? 50));
-    const rows = db.select().from(battles).orderBy(desc(battles.createdAt)).limit(limit).all();
+  // 战报列表（决策 #65/#66）：只显示「与我有关」（进攻或防守方是自己）且属于指定模式的
+  // 对局，保留 3 天（过期行由 maintenance 清扫物理删除，这里只做查询过滤）
+  const REPORT_TTL_MS = 3 * 24 * 3600_000;
+
+  app.get('/api/battles', async (req, reply) => {
+    const player = requirePlayer(req, reply);
+    if (!player) return;
+    const q = req.query as { modId?: string; limit?: string };
+    if (!q.modId) throw new Error('缺少 modId');
+    const cutoff = new Date(Date.now() - REPORT_TTL_MS).toISOString();
+    const limit = Math.min(200, Number(q.limit ?? 100));
+    const rows = db
+      .select()
+      .from(battles)
+      .where(
+        and(
+          eq(battles.modId, q.modId),
+          sql`${battles.createdAt} >= ${cutoff}`,
+          sql`(${battles.attackerToken} = ${player.token} OR ${battles.defenderToken} = ${player.token})`,
+        ),
+      )
+      .orderBy(desc(battles.createdAt))
+      .limit(limit)
+      .all();
     return rows.map((row) => {
       const config = JSON.parse(row.configJson) as BattleConfig;
       return {
@@ -434,6 +468,24 @@ export function registerRoutes(app: FastifyInstance): void {
 
   // ---- 名字天梯 ----
 
+  /** 生成域（同名同角色域）：fantasy-pvp / fantasy-pve → fantasy */
+  function genDomainOf(modId: string): string {
+    return modId.replace(/-(pvp|pve)$/, '');
+  }
+
+  /** 当前生成域（如 fantasy，pvp/pve 互通）下仍存在的队伍所含名字集合。
+   *  天梯条目只有名字还在某支现存队伍里才展示（决策 #67）；不物理删除，
+   *  重建同名队伍后历史战绩自动恢复。 */
+  function liveTeamNames(genDomain: string): Set<string> {
+    const rows = db.select({ modId: teams.modId, membersJson: teams.membersJson }).from(teams).all();
+    const names = new Set<string>();
+    for (const r of rows) {
+      if (genDomainOf(r.modId) !== genDomain) continue;
+      for (const m of JSON.parse(r.membersJson) as MemberJson[]) names.add(m.name);
+    }
+    return names;
+  }
+
   app.get('/api/ladder', async (req) => {
     const q = req.query as { modId?: string; min?: string };
     if (!q.modId) throw new Error('缺少 modId');
@@ -448,7 +500,9 @@ export function registerRoutes(app: FastifyInstance): void {
         ),
       )
       .all();
+    const live = liveTeamNames(genDomainOf(q.modId));
     return rows
+      .filter((r) => live.has(r.name))
       .map((r) => ({
         name: r.name,
         battles: r.wins + r.losses,
@@ -473,7 +527,10 @@ export function registerRoutes(app: FastifyInstance): void {
       .from(pveRecords)
       .where(and(eq(pveRecords.modId, q.modId), eq(pveRecords.bossId, q.bossId)))
       .all();
+    // 只显示现存队伍的记录（决策 #67）；team_id 为 NULL 的存量行无从归属，保留显示
+    const liveTeamIds = new Set(db.select({ id: teams.id }).from(teams).all().map((r) => r.id));
     return rows
+      .filter((r) => r.teamId === null || liveTeamIds.has(r.teamId))
       .map((r) => ({
         battleId: r.battleId,
         teamNames: JSON.parse(r.teamNames) as string[],

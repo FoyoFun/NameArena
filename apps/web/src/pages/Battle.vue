@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onActivated, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { getMod, simulate, validateName } from '@namearena/core';
 import type { BattleConfig, BattleEvent } from '@namearena/core';
 import { api, type BattleRecordDto } from '../api';
-import { setLastBattlePath } from '../battleNav';
+import { useMode } from '../mode';
 import { sequencer } from '../battle-stage/sequencer';
 import BattleStage from '../battle-stage/BattleStage.vue';
 import BattleLog from '../battle-stage/BattleLog.vue';
@@ -12,6 +12,8 @@ import GameIcon from '../components/GameIcon.vue';
 import PageHero from '../components/PageHero.vue';
 
 const route = useRoute();
+const router = useRouter();
+const { modes } = useMode();
 const error = ref('');
 const loading = ref(true);
 const modId = ref('fantasy-pvp');
@@ -36,7 +38,6 @@ async function startFromId(id: string): Promise<void> {
   const { events } = simulate(m, record.config, record.seed);
   lastEvents = events;
   lastKey = route.fullPath;
-  setLastBattlePath(route.fullPath);
   loading.value = false;
   void sequencer.play(events, m.display);
 }
@@ -78,7 +79,6 @@ function startLocalBattle(): void {
   const { events } = simulate(m, config, (Date.now() ^ 0x5f5f5f5f) >>> 0);
   lastEvents = events;
   lastKey = route.fullPath;
-  setLastBattlePath(route.fullPath);
   loading.value = false;
   void sequencer.play(events, m.display);
 }
@@ -120,6 +120,17 @@ watch(
 async function replay() {
   sequencer.setSpeed(speed.value);
   await sequencer.play(lastEvents, mod.value?.display ?? undefined);
+}
+
+/** 返回来源页（决策 #68）：应用内跳转（挑战/快斗/战报点开）→ 原路返回；
+ *  直接打开分享链接 → 回到该战斗所属模式的第一个页签 */
+function goBack(): void {
+  if (window.history.state?.back) {
+    router.back();
+    return;
+  }
+  const fallback = modes.value.find((m) => m.id === modId.value)?.tabs[0]?.path ?? '/';
+  router.replace(fallback);
 }
 
 function toggleSpeed() {
@@ -169,6 +180,12 @@ const resultText = computed(() => {
          战报无论如何保底 40%——展开技能也不会把战报挤没 -->
     <div class="battle-wrap">
       <PageHero icon="swords" title="战斗">
+        <button class="btn small back-btn" title="返回上一页" @click="goBack">
+          <svg viewBox="0 0 512 512" width="13" height="13" fill="currentColor" aria-hidden="true">
+            <path d="M352.7 30.8 127.5 256l225.2 225.2 45.3-45.3L218 256l180-180z" />
+          </svg>
+          <span class="back-label">返回</span>
+        </button>
         <button class="btn small icon-btn" title="从头重播" @click="replay"><GameIcon name="play" :size="13" /></button>
         <button class="btn small" title="播放速度" @click="toggleSpeed"><GameIcon name="speed" :size="13" />{{ speed }}x</button>
         <button class="btn small icon-btn" title="瞬间补完" @click="skip"><GameIcon name="skip" :size="13" /></button>
@@ -208,6 +225,36 @@ const resultText = computed(() => {
   width: 30px;
   padding: 0;
   justify-content: center;
+}
+
+/* 返回按钮：内联箭头与文字对齐 */
+.back-btn svg {
+  flex: none;
+}
+
+/* 移动端（决策 #71）：hero 一行放下 标题+返回+重播+速度+补完+行动数——
+   返回收成 icon-only，动作区不换行、间距收紧（375×667 实测基准）。
+   仅战斗页收紧：其他页 hero 按钮少，wrap + 副题 ellipsis 即可 */
+@media (max-width: 899px) {
+  .battle-wrap :deep(.hero-acts) {
+    flex-wrap: nowrap; /* .battle-wrap[data-v] .hero-acts 特异性 (0,3,0) 压过 theme 基础 (0,2,0) */
+    gap: 4px;
+  }
+
+  .battle-wrap :deep(.hero-acts .btn) {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+
+  .back-label {
+    display: none;
+  }
+
+  .back-btn {
+    width: 30px;
+    padding: 0;
+    justify-content: center;
+  }
 }
 
 /* 移动端（决策 #61）：同样一屏定高——战报固定底部 40%，舞台 60% 内滚 */

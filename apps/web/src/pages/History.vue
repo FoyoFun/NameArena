@@ -1,23 +1,29 @@
 <script setup lang="ts">
-import { onActivated, ref } from 'vue';
+import { computed, onActivated, ref, watch } from 'vue';
 import { getMod } from '@namearena/core';
 import { api, type BattleListItem } from '../api';
 import GameIcon from '../components/GameIcon.vue';
 import PageHero from '../components/PageHero.vue';
+import { useMode } from '../mode';
+
+const { activeMode } = useMode();
+const activeMod = computed(() => activeMode.value?.id ?? '');
 
 const list = ref<BattleListItem[]>([]);
 const error = ref('');
 
 async function load() {
+  if (!activeMod.value) return;
   try {
-    list.value = await api.battles();
+    list.value = await api.battles(activeMod.value);
   } catch (e) {
     error.value = (e as Error).message;
   }
 }
 
-// keep-alive：每次切回战报页都刷新列表
+// keep-alive：每次切回战报页都刷新列表；切模式 → 换生成域重拉（决策 #69）
 onActivated(load);
+watch(activeMod, load);
 
 function time(t: string): string {
   return new Date(t).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -34,7 +40,7 @@ function roundLabel(modId: string): string {
 </script>
 
 <template>
-  <PageHero icon="report" title="历史战报" subtitle="战报只存「配置 + 种子」，点开时本地重演——想看多久之前的都行" />
+  <PageHero icon="report" title="历史战报" subtitle="只显示与你有关的对局（进攻或防守方是你）· 保留 3 天 · 点开本地重演" />
 
   <div class="panel">
     <div class="panel-head">
@@ -54,7 +60,7 @@ function roundLabel(modId: string): string {
             <b :style="{ color: 'var(--side-b)' }">{{ b.teams.find((t) => t.side === 'B')?.names.join('·') }}</b>
           </div>
           <div class="muted" style="font-size: 11px; margin-top: 2px">
-            {{ b.modId }} · {{ time(b.createdAt) }}
+            {{ time(b.createdAt) }}
           </div>
         </div>
         <div class="hist-right">
@@ -64,7 +70,7 @@ function roundLabel(modId: string): string {
           <span class="muted" style="font-size: 11px">{{ b.rounds }}{{ roundLabel(b.modId) }} · 点击重演</span>
         </div>
       </router-link>
-      <div v-if="!error && list.length === 0" class="muted empty">还没有对局，去竞技场打一场吧</div>
+      <div v-if="!error && list.length === 0" class="muted empty">这个模式还没有你的对局——去竞技场打一场吧</div>
     </div>
   </div>
 </template>

@@ -263,11 +263,18 @@ a {
   color: var(--accent);
 }
 
+.page-hero .hero-body {
+  /* flex 收缩前提（正反例 #9）：没有它，副题 nowrap 的 min-content 会把动作区
+     挤出 overflow:hidden 边界（375 下「刷新」消失、ellipsis 失效） */
+  min-width: 0;
+}
+
 .page-hero .hero-t {
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.02em;
   line-height: 1.2;
+  white-space: nowrap; /* 标题都是短词（战斗/竞技场…），窄屏也不折行 */
 }
 
 .page-hero .hero-s {
@@ -289,7 +296,9 @@ a {
   justify-content: flex-end;
 }
 
-/* 移动端：hero 全部内容压成一行（主人拍板 #62 补充：375 宽也要单行） */
+/* 移动端：hero 全部内容压成一行（主人拍板 #62 补充：375 宽也要单行）。
+   注意：动作区不在此处统一 nowrap——按钮最多的战斗页在组件内自行收紧，
+   其他页（如竞技场的「刷新」）wrap + 副题 ellipsis 才不溢出（决策 #71 教训） */
 
 /* ---------- 布局原语（分块排版；只支持垂直方向滚动） ---------- */
 

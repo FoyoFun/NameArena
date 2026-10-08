@@ -12,7 +12,7 @@ defineProps<{ icon: string; title: string; subtitle?: string }>();
 <template>
   <div class="page-hero">
     <div class="hero-ico"><GameIcon :name="icon" :size="20" /></div>
-    <div>
+    <div class="hero-body">
       <div class="hero-t">{{ title }}</div>
       <div v-if="subtitle" class="hero-s">{{ subtitle }}</div>
     </div>
